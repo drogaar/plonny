@@ -18,51 +18,63 @@ class Layer(object):
 
     def show(self):
         fig = plt.figure()
-        # fig.set_size_inches(8, 2.5)
-        # margins?
         ax = fig.add_subplot(111)
+        plt.axis('off')
 
         # get max shapes
         maxShape = [0,0]
         for layer in self.graph:
-            shp = layer.shape
             for dim in range(2):
-                if shp[dim] > maxShape[dim]:
-                    maxShape[dim] = shp[dim]
-        # for dim in range(2):
-            # maxShape[dim] *= 8
-        maxShape[0] *= 8
-        maxShape[1] *= 1.5
+                if layer.shape[dim] > maxShape[dim]:
+                    maxShape[dim] = layer.shape[dim]
+        maxShape[0] *= 12        #shapes no wider than 1/8 of plot
+        maxShape[1] *= 1.5      #shapes no higher than 2/3 of plot
+        # def width2w(width):
+        #     # 1 = spacings + totalwidths
+        #     # totalwidths = 1 - spacings
+        #     spacings = spacing * (len(self.graph)-1)
+        #     totalwidths = 0
+        #     for layer in self.graph:
+        #         totalwidths += layer.shape[0] / maxShape[0]
+        #     return width /
 
-        txtheight = 1
+
+        txtheight = 1.1
         xy = [0,0]
-        spacing = 0.025
-        plt.axis('off')
+        spacing = 0.05
+        depth_spacing = .5*spacing
         for ctr, layer in enumerate(self.graph):
-
             shp = layer.shape
-            # xy = (ctr / len(self.graph), 0)
 
-            print(shp[0] / maxShape[0], shp[1] / maxShape[1])
+            # print(shp[0] / maxShape[0], shp[1] / maxShape[1])
             width = shp[0] / maxShape[0]
             height = shp[1] / maxShape[1]
             xy[1] = .5 - .5 * height
 
             # Draw shape
-            plt.text(xy[0]+.5*width, xy[1]-0.05, shp[0], rotation=0)
+            txt_margin = 0.05
+            depth = shp[2] if len(shp) > 2 else 1
+            plt.text(xy[0]+.5*width, xy[1]-txt_margin, shp[0], rotation=0)
             plt.text(xy[0], xy[1] + .5*height, shp[1], rotation=90)
-            rect = patches.Rectangle(   tuple(xy),
-                                        width,
-                                        height,
-                                        linewidth=1)#, edgecolor='r', facecolor='none'
-            ax.add_patch(rect)
+            if len(shp) > 2:
+                plt.text(xy[0], xy[1] + height + txt_margin, depth, rotation=45)
+            print("shape,", shp, " d:", depth, " w:", width, " h:", height)
+            for z in reversed(range(depth)):
+                xyz = [ax + depth_spacing * (z/depth) for ax in xy]
+                d = (1 - z/depth) * 0.8 + 0.2
+                color = tuple([.4* d, .5* d, 1* d])
+                rect = patches.Rectangle(   tuple(xyz),
+                                            width,
+                                            height,
+                                            color=color,
+                                            linewidth=1)#, edgecolor='r', facecolor='none'
+                ax.add_patch(rect)
 
             # Annotate
             plt.text(xy[0], txtheight, type(layer).__name__, rotation=90)
 
+            # Update x position
             xy[0] += shp[0] / maxShape[0] + spacing
-            # ax.add_patch(patches.Rectangle((0,0), 0.5, 0.5, linewidth=1))
-            # fig.patches.extend([rect])
 
         plt.show()
 
@@ -86,6 +98,11 @@ class FC(Layer):
         Layer.__init__(self, layer);
         self.neurons = neurons
 
+class CTC(Layer):
+    def __init__(self, layer, shape):
+        Layer.__init__(self, layer);
+        self.shape = shape
+
 if __name__ == "__main__":
     # Define model by calling layers
     image_0 = Input((32, 128, 1))
@@ -104,6 +121,8 @@ if __name__ == "__main__":
     conv2_9 = Conv2D(conv2_8, (4, 16, 7))
 
     resh_10 = Reshape(conv2_9, (8, 56))
-    conv_11 = Conv2D(conv2_9, (8, 28))
+    conv_11 = Conv2D(resh_10, (8, 28))
 
-    conv_11.show()
+    ctcl_12 = CTC(conv_11, (1, 1))
+
+    ctcl_12.show()
