@@ -123,6 +123,4 @@ if __name__ == "__main__":
     resh_10 = Reshape(conv2_9, (8, 56))
     conv_11 = Conv2D(resh_10, (8, 28))
 
-    ctcl_12 = CTC(conv_11, (1, 1))
-
-    ctcl_12.show()
+    conv_11.show()
