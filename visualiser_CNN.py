@@ -96,9 +96,6 @@ class Layer(object):
         depth = shp[2] if len(shp) > 2 else 1
         return (width, height, depth)
 
-
-
-
     def graphshow(self):
         fig = plt.figure()
         ax = fig.add_subplot(111)
@@ -143,6 +140,24 @@ class FC(Layer):
         Layer.__init__(self, layer);
         self.shape = (1, neurons)
 
+    def show(self, axes, xy, width, height, depth, shp, param):
+        """Plot this layer"""
+        # Annotate dimensions and layer
+        plt.text(xy['x'], xy['y'] + .5*height, shp[1], rotation=90)
+        plt.text(xy['x'], param['txtheight'], type(self).__name__, rotation=90)
+
+        n_neurons = shp[1]
+        for neuron in range(n_neurons):
+            color = (.4, .5, 1)
+            # xyd = {key: xy[key] + param['depth_spacing'] * (z/depth) for key in xy.keys()}
+            xyn = dict(xy)
+            xyn['y'] += neuron * height / n_neurons
+            circ = patches.Circle(      tuple(xyn.values()),
+                                        radius = 0.1 * height / n_neurons,
+                                        color=color,
+                                        linewidth=1)
+            axes.add_patch(circ)
+
 class CTC(Layer):
     def __init__(self, layer, shape):
         Layer.__init__(self, layer);
@@ -171,4 +186,7 @@ if __name__ == "__main__":
     # conv_11.show()
 
     fccc_12 = FC(conv_11, 8)
-    fccc_12.graphshow()
+
+    fccc_13 = FC(fccc_12, 50)
+
+    fccc_13.graphshow()
