@@ -5,26 +5,26 @@ import numpy as np
 import seaborn as sns
 sns.set()
 
-def show_basiclayer(self, axes, xy, width, height, depth, shp, param):
+def show_basiclayer(self, axes, param):
     """Plot this layer"""
     # Annotate dimensions and layer
-    plt.text(xy['x']+.5*width, xy['y']-param['txt_margin'], shp[0], rotation=0)
-    plt.text(xy['x'], xy['y'] + .5*height, shp[1], rotation=90)
-    if len(shp) > 2:
-        plt.text(xy['x'], xy['y'] + height + param['txt_margin'], depth, rotation=45)
-    plt.text(xy['x'], param['txtheight'], type(self).__name__, rotation=90)
+    plt.text(self.xy['x']+.5*self.width, self.xy['y']-param['txt_margin'], self.shape[0], rotation=0)
+    plt.text(self.xy['x'], self.xy['y'] + .5*self.height, self.shape[1], rotation=90)
+    if len(self.shape) > 2:
+        plt.text(self.xy['x'], self.xy['y'] + self.height + param['txt_margin'], self.depth, rotation=45)
+    plt.text(self.xy['x'], param['txtheight'], type(self).__name__, rotation=90)
 
     # Draw shape
-    for z in reversed(range(depth)):
+    for z in reversed(range(self.depth)):
         # Color calculation
-        d = (1 - z/depth) * 0.8 + 0.2
+        d = (1 - z/self.depth) * 0.8 + 0.2
         color = tuple([.4* d, .5* d, 1* d])
 
         # draw
-        xyd = {key: xy[key] + param['depth_spacing'] * (z/depth) for key in xy.keys()}
+        xyd = {key: self.xy[key] + param['depth_spacing'] * (z/self.depth) for key in self.xy.keys()}
         rect = patches.Rectangle(   tuple(xyd.values()),
-                                    width,
-                                    height,
+                                    self.width,
+                                    self.height,
                                     color=color,
                                     linewidth=1)#, edgecolor='r', facecolor='none'
         axes.add_patch(rect)
@@ -73,21 +73,6 @@ class Layer(object):
                     maxShape[dim] = layer.shape[dim]
         return {'w':maxShape[0], 'h':maxShape[1]}
 
-    # def outputParam(self, max_shp=None):
-    #     """Return startx, starty, width, height & depth of this layers output"""
-    #     max_shp = maxShape() if max_shp is None else max_shp
-    #
-    #     width = self._width2w(layer.shape[0])
-    #     height = layer.shape[1] / max_shp['h'] * self.maxHeight
-    #     depth = shp[2] if len(shp) > 2 else 1
-    #
-    #     xy = {}
-    #     xy['y'] = .5 - .5 * height
-    #     xy['x'] += width + self.spacing
-    #     outputshapes = [layer.outputParam(max_shp) for layer in self.graph]
-    #     xy['x'] = np.sum([width for (_, width, _, _) in ])
-    #     return (xy, width, height, depth)
-
     def output_shape(self, graph=None):
         maxShape = self.maxShape(graph)
 
@@ -106,20 +91,33 @@ class Layer(object):
         # get max shapes
         maxShape = self.maxShape()
 
-        # Iterate layers, plotting their output shapes
+        # set layer plotting properties
         xy = {'x':0,'y':0}
-        for ctr, layer in enumerate(self.graph):
+        for layer in self.graph:
             shp = layer.shape
-            width = self._width2w(shp[0])
-            height = shp[1] / maxShape['h'] * self.param['maxHeight']
-            depth = shp[2] if len(shp) > 2 else 1
-            # xy['y'] = .5 - .5 * height
-            xy['y'] = .5 * self.param['maxHeight'] - .5 * height + self.param['txt_margin']
+            layer.width     = self._width2w(shp[0])
+            layer.height    = shp[1] / maxShape['h'] * self.param['maxHeight']
+            layer.depth     = shp[2] if len(shp) > 2 else 1
 
-            layer.show(ax, xy, width, height, depth, shp, self.param)
+            xy['y'] = .5 * self.param['maxHeight'] - .5 * layer.height + self.param['txt_margin']
+            layer.xy        = dict(xy)
 
             # Update x position
-            xy['x'] += width + self.param['spacing']
+            xy['x'] += layer.width + self.param['spacing']
+
+        # Iterate layers, plotting their output shapes
+        # xy = {'x':0,'y':0}
+        for ctr, layer in enumerate(self.graph):
+            # shp = layer.shape
+            # width = self._width2w(shp[0])
+            # height = shp[1] / maxShape['h'] * self.param['maxHeight']
+            # depth = shp[2] if len(shp) > 2 else 1
+            # xy['y'] = .5 * self.param['maxHeight'] - .5 * height + self.param['txt_margin']
+
+            layer.show(ax, self.param)
+            #
+            # # Update x position
+            # xy['x'] += width + self.param['spacing']
 
         plt.show()
 
@@ -143,20 +141,19 @@ class FC(Layer):
         Layer.__init__(self, layer);
         self.shape = (1, neurons)
 
-    def show(self, axes, xy, width, height, depth, shp, param):
+    def show(self, axes, param):
         """Plot this layer"""
         # Annotate dimensions and layer
-        plt.text(xy['x'], xy['y'] + .5*height, shp[1], rotation=90)
-        plt.text(xy['x'], param['txtheight'], type(self).__name__, rotation=90)
+        plt.text(self.xy['x'], self.xy['y'] + .5*self.height, self.shape[1], rotation=90)
+        plt.text(self.xy['x'], param['txtheight'], type(self).__name__, rotation=90)
 
-        n_neurons = shp[1]
+        n_neurons = self.shape[1]
         for neuron in range(n_neurons):
             color = (.4, .5, 1)
-            # xyd = {key: xy[key] + param['depth_spacing'] * (z/depth) for key in xy.keys()}
-            xyn = dict(xy)
-            xyn['y'] += neuron * height / n_neurons
+            xyn = dict(self.xy)
+            xyn['y'] += neuron * self.height / n_neurons
             circ = patches.Circle(      tuple(xyn.values()),
-                                        radius = 0.1 * height / n_neurons,
+                                        radius = 0.1 * self.height / n_neurons,
                                         color=color,
                                         linewidth=1)
             axes.add_patch(circ)
