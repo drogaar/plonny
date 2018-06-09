@@ -5,7 +5,7 @@ import numpy as np
 import seaborn as sns
 sns.set()
 
-def show_basiclayer(self, axes, param):
+def show_basiclayer(self, axes, param, inputs=[]):
     """Plot this layer"""
     # Annotate dimensions and layer
     plt.text(self.xy['x']+.5*self.width, self.xy['y']-param['txt_margin'], self.shape[0], rotation=0)
@@ -85,6 +85,7 @@ class Layer(object):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         plt.axis('off')
+        plt.ylim(0, 1)
         if(title is not None):
             plt.text(0.5, 1.05, title, horizontalalignment='center')
 
@@ -106,18 +107,12 @@ class Layer(object):
             xy['x'] += layer.width + self.param['spacing']
 
         # Iterate layers, plotting their output shapes
-        # xy = {'x':0,'y':0}
         for ctr, layer in enumerate(self.graph):
-            # shp = layer.shape
-            # width = self._width2w(shp[0])
-            # height = shp[1] / maxShape['h'] * self.param['maxHeight']
-            # depth = shp[2] if len(shp) > 2 else 1
-            # xy['y'] = .5 * self.param['maxHeight'] - .5 * height + self.param['txt_margin']
-
-            layer.show(ax, self.param)
-            #
-            # # Update x position
-            # xy['x'] += width + self.param['spacing']
+            if(ctr>0):
+                layer.show(ax, self.param, [self.graph[ctr-1]])
+            else:
+                layer.show(ax, self.param)
+            # layer.show(ax, self.param)
 
         plt.show()
 
@@ -141,7 +136,7 @@ class FC(Layer):
         Layer.__init__(self, layer);
         self.shape = (1, neurons)
 
-    def show(self, axes, param):
+    def show(self, axes, param, inputs=[]):
         """Plot this layer"""
         # Annotate dimensions and layer
         plt.text(self.xy['x'], self.xy['y'] + .5*self.height, self.shape[1], rotation=90)
@@ -149,6 +144,7 @@ class FC(Layer):
 
         n_neurons = self.shape[1]
         for neuron in range(n_neurons):
+            # draw neurons
             color = (.4, .5, 1)
             xyn = dict(self.xy)
             xyn['y'] += neuron * self.height / n_neurons
@@ -158,6 +154,13 @@ class FC(Layer):
                                         linewidth=1)
             axes.add_patch(circ)
 
+            # draw connections
+            color = (0, 0, 0)
+            for layer in inputs:
+                for vert in range(layer.shape[1]):
+                    xy_dest = ( layer.xy['x'] + layer.width,
+                                layer.xy['y'] + (vert/layer.shape[1]) * layer.height)
+                    plt.plot([xyn['x'], xy_dest[0]], [xyn['y'], xy_dest[1]], linewidth=.1, alpha=0.1, color=color)
 class CTC(Layer):
     def __init__(self, layer, shape):
         Layer.__init__(self, layer);
