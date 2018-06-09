@@ -5,10 +5,36 @@ import numpy as np
 import seaborn as sns
 sns.set()
 
+def show_basiclayer(self, axes, xy, width, height, depth, shp, param):
+    """Plot this layer"""
+    # Annotate dimensions and layer
+    plt.text(xy['x']+.5*width, xy['y']-param['txt_margin'], shp[0], rotation=0)
+    plt.text(xy['x'], xy['y'] + .5*height, shp[1], rotation=90)
+    if len(shp) > 2:
+        plt.text(xy['x'], xy['y'] + height + param['txt_margin'], depth, rotation=45)
+    plt.text(xy['x'], param['txtheight'], type(self).__name__, rotation=90)
+
+    # Draw shape
+    for z in reversed(range(depth)):
+        # Color calculation
+        d = (1 - z/depth) * 0.8 + 0.2
+        color = tuple([.4* d, .5* d, 1* d])
+
+        # draw
+        xyd = {key: xy[key] + param['depth_spacing'] * (z/depth) for key in xy.keys()}
+        rect = patches.Rectangle(   tuple(xyd.values()),
+                                    width,
+                                    height,
+                                    color=color,
+                                    linewidth=1)#, edgecolor='r', facecolor='none'
+        axes.add_patch(rect)
+
 class Input(object):
     def __init__(self, shape):
         self.shape = shape
         self.graph = [self]
+
+    show = show_basiclayer
 
 class Layer(object):
     def __init__(self, layer):
@@ -17,24 +43,31 @@ class Layer(object):
         self.graph = layer.graph + [self]
         self.shape = None
 
-        self.txtheight = 1.1            #where to draw text. plot top=1
-        self.txt_margin = 0.05          #offsets for shape annotators
+        self.param = {
+            'txtheight'       : 1.1,                #where to draw text. plot top=1
+            'txt_margin'      : 0.05,               #offsets for shape annotators
+            'spacing'         : 0.05,               #horizontal space between shapes
+            'maxHeight'       : 0.666               #no higher than 2/3
+        }
+        #how far deep layers go to back
+        self.param['depth_spacing'] = .5*self.param['spacing']
 
-        self.spacing = 0.05             #horizontal space between shapes
-        self.depth_spacing = .5*self.spacing #how far deep layers may extend to back
-        self.maxHeight = 0.666          #no higher than 2/3
+    show = show_basiclayer
 
-    def _width2w(self, width):
+    def _width2w(self, width, graph=None):
         """Convert width in shape space to coordinate space width"""
-        spacings = self.spacing * (len(self.graph)-1)
-        totalwidths = np.sum([layer.shape[0] for layer in self.graph])
+        graph = self.graph if graph is None else graph
+
+        spacings = self.param['spacing'] * (len(graph)-1)
+        totalwidths = np.sum([layer.shape[0] for layer in graph])
         return width / totalwidths * (1 - spacings)
 
     def maxShape(self, graph=None):
         """Returns maximum width and height of all layer outputs"""
         graph = self.graph if graph is None else graph
+
         maxShape = [0,0]
-        for layer in self.graph:
+        for layer in graph:
             for dim in range(2):
                 if layer.shape[dim] > maxShape[dim]:
                     maxShape[dim] = layer.shape[dim]
@@ -55,7 +88,18 @@ class Layer(object):
     #     xy['x'] = np.sum([width for (_, width, _, _) in ])
     #     return (xy, width, height, depth)
 
-    def show(self):
+    def output_shape(self, graph=None):
+        maxShape = self.maxShape(graph)
+
+        width = self._width2w(shp[0])
+        height = shp[1] / maxShape['h'] * self.param['maxHeight']
+        depth = shp[2] if len(shp) > 2 else 1
+        return (width, height, depth)
+
+
+
+
+    def graphshow(self):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         plt.axis('off')
@@ -68,35 +112,14 @@ class Layer(object):
         for ctr, layer in enumerate(self.graph):
             shp = layer.shape
             width = self._width2w(shp[0])
-            height = shp[1] / maxShape['h'] * self.maxHeight
+            height = shp[1] / maxShape['h'] * self.param['maxHeight']
             depth = shp[2] if len(shp) > 2 else 1
             xy['y'] = .5 - .5 * height
 
-            # Annotate dimensions and layer
-            plt.text(xy['x']+.5*width, xy['y']-self.txt_margin, shp[0], rotation=0)
-            plt.text(xy['x'], xy['y'] + .5*height, shp[1], rotation=90)
-            if len(shp) > 2:
-                plt.text(xy['x'], xy['y'] + height + self.txt_margin, depth, rotation=45)
-            plt.text(xy['x'], self.txtheight, type(layer).__name__, rotation=90)
-
-            # print("shape,", shp, " d:", depth, " w:", width, " h:", height)
-            # Draw shape
-            for z in reversed(range(depth)):
-                # Color calculation
-                d = (1 - z/depth) * 0.8 + 0.2
-                color = tuple([.4* d, .5* d, 1* d])
-
-                # draw
-                xyd = {key: xy[key] + self.depth_spacing * (z/depth) for key in xy.keys()}
-                rect = patches.Rectangle(   tuple(xyd.values()),
-                                            width,
-                                            height,
-                                            color=color,
-                                            linewidth=1)#, edgecolor='r', facecolor='none'
-                ax.add_patch(rect)
+            layer.show(ax, xy, width, height, depth, shp, self.param)
 
             # Update x position
-            xy['x'] += width + self.spacing
+            xy['x'] += width + self.param['spacing']
 
         plt.show()
 
@@ -148,4 +171,4 @@ if __name__ == "__main__":
     # conv_11.show()
 
     fccc_12 = FC(conv_11, 8)
-    fccc_12.show()
+    fccc_12.graphshow()
