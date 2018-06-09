@@ -44,10 +44,10 @@ class Layer(object):
         self.shape = None
 
         self.param = {
-            'txtheight'       : 1.1,                #where to draw text. plot top=1
+            'txtheight'       : .95,                #where to draw text. plot top=1
             'txt_margin'      : 0.05,               #offsets for shape annotators
             'spacing'         : 0.05,               #horizontal space between shapes
-            'maxHeight'       : 0.666               #no higher than 2/3
+            'maxHeight'       : 0.65               #no higher than 2/3
         }
         #how far deep layers go to back
         self.param['depth_spacing'] = .5*self.param['spacing']
@@ -96,10 +96,12 @@ class Layer(object):
         depth = shp[2] if len(shp) > 2 else 1
         return (width, height, depth)
 
-    def graphshow(self):
+    def graphshow(self, title=None):
         fig = plt.figure()
         ax = fig.add_subplot(111)
         plt.axis('off')
+        if(title is not None):
+            plt.text(0.5, 1.05, title, horizontalalignment='center')
 
         # get max shapes
         maxShape = self.maxShape()
@@ -111,7 +113,8 @@ class Layer(object):
             width = self._width2w(shp[0])
             height = shp[1] / maxShape['h'] * self.param['maxHeight']
             depth = shp[2] if len(shp) > 2 else 1
-            xy['y'] = .5 - .5 * height
+            # xy['y'] = .5 - .5 * height
+            xy['y'] = .5 * self.param['maxHeight'] - .5 * height + self.param['txt_margin']
 
             layer.show(ax, xy, width, height, depth, shp, self.param)
 
@@ -183,10 +186,8 @@ if __name__ == "__main__":
     resh_10 = Reshape(conv2_9, (8, 56))
     conv_11 = Conv2D(resh_10, (8, 28))
 
-    # conv_11.show()
-
     fccc_12 = FC(conv_11, 8)
 
     fccc_13 = FC(fccc_12, 50)
 
-    fccc_13.graphshow()
+    fccc_13.graphshow("Neural Network")
