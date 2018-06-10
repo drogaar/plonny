@@ -127,7 +127,6 @@ class Layer(object):
             layer.height    = shp[1] / maxShape['h'] * self.param['maxHeight']
             layer.depth     = shp[2] / maxShape['d'] if len(shp) > 2 else 0
             layer.maxShape  = maxShape
-            print(layer.depth)
 
             xy['y'] = .5 * self.param['maxHeight'] - .5 * layer.height + self.param['txt_margin']
             layer.xy        = dict(xy)
@@ -146,21 +145,37 @@ class Layer(object):
 
 class Pool(Layer):
     def __init__(self, layer, shape):
-        Layer.__init__(self, layer, shape);
+        Layer.__init__(self, layer, shape)
 
 class Reshape(Layer):
     def __init__(self, layer, shape):
-        Layer.__init__(self, layer, shape);
+        Layer.__init__(self, layer, shape)
 
 class CTC(Layer):
     """Connectionist Temporal Classification"""
     def __init__(self, layer, shape):
-        Layer.__init__(self, layer, shape);
+        Layer.__init__(self, layer, shape)
+
+class Upsample(Layer):
+    def __init__(self, layer, shape):
+        Layer.__init__(self, layer, shape)
+
+class Dropout(Layer):
+    def __init__(self, layer, shape):
+        Layer.__init__(self, layer, shape)
+
+class Concat(Layer):
+    def __init__(self, layer, extra_input_layers):
+        shape = list(layer.shape)
+        for input_layer in extra_input_layers:
+            shape[2] += list(input_layer.shape)[2] if len(input_layer.shape) > 2 else 0
+
+        Layer.__init__(self, layer, shape)
 
 class FullyConnected(Layer):
     def __init__(self, layer, neurons):
         shape = (1, neurons)
-        Layer.__init__(self, layer, shape);
+        Layer.__init__(self, layer, shape)
 
     def show(self, axes, param, inputs=[]):
         """Plot this layer"""
@@ -190,7 +205,7 @@ class FullyConnected(Layer):
 class Conv2D(Layer):
     """2D Convolution"""
     def __init__(self, layer, shape, kernel):
-        Layer.__init__(self, layer, shape);
+        Layer.__init__(self, layer, shape)
         self.kernel = kernel
 
     def show(self, axes, param, inputs=[]):
