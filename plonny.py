@@ -6,7 +6,7 @@ import seaborn as sns
 
 sns.set()
 
-def annotate_tensor(self, param, showdims=(True, True, True)):
+def annotate_tensor(self, showdims=(True, True, True)):
     """Annotates an output shape with its dimensions."""
     def addtext(text, x_offset=0, y_offset=0, rotation=0):
         fontsize = 8
@@ -15,17 +15,17 @@ def annotate_tensor(self, param, showdims=(True, True, True)):
                     text, rotation=rotation, size=fontsize)
 
     if showdims[0]:                                 # width
-        addtext(self.shape[0], x_offset = .5*self.width, y_offset = -param['txt_margin'])
+        addtext(self.shape[0], x_offset = .5*self.width, y_offset = -1 * GraphParam.txt_margin)
     if showdims[1]:                                 # height
         addtext(self.shape[1], y_offset = .5*self.height, rotation=90)
     if showdims[2] and len(self.shape) > 2:         # depth
-        addtext(self.shape[2], y_offset = self.height + param['txt_margin'], rotation=45)
+        addtext(self.shape[2], y_offset = self.height + GraphParam.txt_margin, rotation=45)
 
-def add_layer_name(self, param):
+def add_layer_name(self):
     """Adds the layers name to plot."""
-    plt.text(self.xy['x'], param['txtheight'], type(self).__name__, rotation=90)
+    plt.text(self.xy['x'], GraphParam.txt_height, type(self).__name__, rotation=90)
 
-def draw_tensor(self, axes, param):
+def draw_tensor(self, axes):
     """Draw a three dimenionsal cube depending on given layers output shape"""
     shape2 = self.shape[2] if len(self.shape)>2 else 1
     for z in reversed(range(shape2)):
@@ -34,7 +34,7 @@ def draw_tensor(self, axes, param):
         color = tuple(np.array(GraphParam.tensorColor) * d)
 
         # draw output shape
-        xyd = {key: self.xy[key] + param['depth_spacing'] * (z/shape2*self.depth) for key in self.xy.keys()}
+        xyd = {key: self.xy[key] + GraphParam.depth_spacing * (z/shape2*self.depth) for key in self.xy.keys()}
         rect = patches.Rectangle(   tuple(xyd.values()),
                                     self.width,
                                     self.height,
@@ -42,13 +42,11 @@ def draw_tensor(self, axes, param):
                                     linewidth=1)#, edgecolor='r', facecolor='none'
         axes.add_patch(rect)
 
-    print("xy: ", self.xy, " w: ", self.width, " h: ", self.height)
-
-def show_basiclayer(self, axes, param, inputs=[]):
+def show_basiclayer(self, axes, inputs=[]):
     """Default plot for Input and Layer"""
-    draw_tensor(self, axes, param)
-    annotate_tensor(self, param)
-    add_layer_name(self, param)
+    draw_tensor(self, axes)
+    annotate_tensor(self)
+    add_layer_name(self)
 
 def calcMaxShape(graph):
     """Returns maximum dimensions of all layer outputs"""
@@ -72,7 +70,7 @@ def _width2w(self, width, graph=None):
     """Convert width in shape space to coordinate space width"""
     graph = self.graph if graph is None else graph
 
-    spacings = self.param['spacing'] * len(graph)
+    spacings = GraphParam.spacing * len(graph)
     totalwidths = np.sum([layer.shape[0] for layer in graph])
     return width / totalwidths * (1 - spacings)
 
@@ -89,12 +87,13 @@ def defineFigure():
 
 
 class GraphParam:
-    tensorColor =   (.4, .5, 1)
-    lineColor   =   (0, 0, 0)
+    tensorColor     =   (.4, .5, 1)
+    lineColor       =   (0, 0, 0)
 
     # The plot space is defined as x in [0,1], y in [0,1]
-    txt_margin  =   0.025           #offsets for shape annotators
-    spacing     =   0.025           #horizontal space between shapes
+    txt_margin      =   0.025           #offsets for shape annotators
+    spacing         =   0.025           #horizontal space between shapes
+    depth_spacing   =   .7 * spacing    #3D tensor depth
 
 
 
@@ -102,12 +101,6 @@ class Input(object):
     def __init__(self, shape):
         self.shape = shape
         self.graph = [self]
-
-        self.param = {
-            'txtheight'       : .8,                #where to draw text. plot top=1
-            'txt_margin'      : 0.025,               #offsets for shape annotators
-            'spacing'         : 0.025,               #horizontal space between shapes
-        }
 
     show = show_basiclayer
     setDimensions = setDims
@@ -122,26 +115,9 @@ class Layer(object):
         self.graph = layer.graph + [self]
         self.shape = shape
 
-        self.param = {
-            'txtheight'       : .8,                #where to draw text. plot top=1
-            'txt_margin'      : 0.025,               #offsets for shape annotators
-            'spacing'         : 0.025,               #horizontal space between shapes
-        }
-        #how far deep layers go to back
-        self.param['depth_spacing'] = .7*self.param['spacing']
-
     show = show_basiclayer
     setDimensions = setDims
     convertWidth = _width2w
-
-    def output_shape(self, graph=None):
-        """Returns output shape of this layer"""
-        maxShape = self.maxShape(graph)
-
-        width = self._width2w(shp[0])
-        height = shp[1] / maxShape['h'] * self.param['maxHeight']
-        depth = shp[2] if len(shp) > 2 else 1
-        return (width, height, depth)
 
     def graphshow(self, title="Neural Network"):
         ax = defineFigure()
@@ -150,22 +126,22 @@ class Layer(object):
         xy = {'x':0,'y':0}
         for layer in self.graph:
             layer.setDimensions(self.graph)
-            xy['y'] = .5 - .5 * layer.height + self.param['txt_margin']
+            xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
             layer.xy        = dict(xy)
 
             # Update x position
-            xy['x'] += layer.width + self.param['spacing']
+            xy['x'] += layer.width + GraphParam.spacing
 
         # set titles locations and plot
         maxheight = np.max([layer.height for layer in self.graph])
-        self.param['txtheight']  = 0.5 - .5 * maxheight - 2*self.param['txt_margin']
-        self.param['titleheight'] = 0.5 + .5 * maxheight + 4*self.param['txt_margin']
-        plt.text(0.5, self.param['titleheight'], title, horizontalalignment='center')
+        GraphParam.txt_height = 0.5 - .5 * maxheight - 2*GraphParam.txt_margin
+        GraphParam.titleheight = 0.5 + .5 * maxheight + 4*GraphParam.txt_margin
+        plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
 
         # Iterate layers, plotting their output shapes
-        self.graph[0].show(ax, self.param)
-        for ctr, layer in enumerate(self.graph[1:], 1):
-            layer.show(ax, self.param, [self.graph[ctr-1]])
+        self.graph[0].show(ax)
+        for current, layer in enumerate(self.graph[1:], 1):
+            layer.show(ax, [self.graph[current-1]])
 
         plt.show()
 
@@ -209,14 +185,14 @@ class Concat(Layer):
         Concat.nConcatsUsed += 1
         self.concat_spacing = 0.025 / Concat.nConcatsUsed #txt margin?
 
-    def show(self, axes, param, inputs=[]):
+    def show(self, axes, inputs=[]):
         """Plot this layer"""
-        draw_tensor(self, axes, param)
-        annotate_tensor(self, param)
-        add_layer_name(self, param)
+        draw_tensor(self, axes)
+        annotate_tensor(self)
+        add_layer_name(self)
 
         # show connections to input tensors
-        yPos = self.xy['y'] - param['txt_margin'] - Concat.nConcatsUsed * self.concat_spacing
+        yPos = self.xy['y'] - GraphParam.txt_margin - Concat.nConcatsUsed * self.concat_spacing
         for idx, layer in enumerate(self.input_layers):
             # downwards spacing
             plt.plot([layer.xy['x'], layer.xy['x']], [layer.xy['y'], yPos], linewidth=1, color=GraphParam.lineColor)
@@ -236,7 +212,7 @@ class FullyConnected(Layer):
         FullyConnected.FClayers += [neurons]
 
     def setDimensions(self, graph=None):
-        """Sets coordinate space dimensions, given this layers shape"""
+        """fully connected layers use a softer height"""
         graph = self.graph if graph is None else graph
 
         self.maxShape  = calcMaxShape(graph)
@@ -244,10 +220,10 @@ class FullyConnected(Layer):
         self.height    = self.shape[1] / np.max(FullyConnected.FClayers) * .5
         self.depth     = self.shape[2] / self.maxShape['d'] if len(self.shape) > 2 else 0
 
-    def show(self, axes, param, inputs=[]):
+    def show(self, axes, inputs=[]):
         """Plot this layer"""
-        annotate_tensor(self, param, (False,True,False))
-        add_layer_name(self, param)
+        annotate_tensor(self, (False,True,False))
+        add_layer_name(self)
 
         # draw neurons
         n_neurons = self.shape[1]
@@ -276,11 +252,11 @@ class Conv2D(Layer):
         Layer.__init__(self, layer, shape)
         self.kernel = kernel
 
-    def show(self, axes, param, inputs=[]):
+    def show(self, axes, inputs=[]):
         """Default plot for Input and Layer"""
-        draw_tensor(self, axes, param)
-        annotate_tensor(self, param)
-        add_layer_name(self, param)
+        draw_tensor(self, axes)
+        annotate_tensor(self)
+        add_layer_name(self)
 
         # draw kernel
         input = inputs[0]
