@@ -8,26 +8,33 @@ sns.set()
 
 def annotate_tensor(self, param, showdims=(True, True, True)):
     """Annotates an output shape with its dimensions."""
+    fontsize = 8
     # width
     if showdims[0]:
         plt.text(   self.xy['x']+.5*self.width,
                     self.xy['y']-param['txt_margin'],
-                    self.shape[0], rotation=0)
+                    # self.xy['y'],
+                    self.shape[0], rotation=0, size=fontsize)
 
     # height
     if showdims[1]:
-        plt.text(   self.xy['x'],
+        t = plt.text(   self.xy['x'],
                     self.xy['y'] + .5*self.height,
-                    self.shape[1], rotation=90)
+                    self.shape[1], rotation=90, size=fontsize)
+        # bb = t.get_window_extent(renderer=r)height
+        # param['txtheight'] = 0.5 - t.get_window_extent(renderer=plt.gcf().canvas.get_renderer()).height
+        # print(param['txtheight'])
 
     # depth
     if len(self.shape) > 2 and showdims[2]:
         plt.text(   self.xy['x'],
                     self.xy['y'] + self.height + param['txt_margin'],
-                    self.shape[2], rotation=45)
+                    # self.xy['y'] + self.height,
+                    self.shape[2], rotation=45, size=fontsize)
 
 def add_layer_name(self, param):
     """Adds the layers name to plot."""
+    # plt.text(self.xy['x'], 0.5 - 2*param['txt_margin'], type(self).__name__, rotation=90)
     plt.text(self.xy['x'], param['txtheight'], type(self).__name__, rotation=90)
 
 def draw_tensor(self, axes, param):
@@ -70,10 +77,9 @@ class Layer(object):
         self.shape = shape
 
         self.param = {
-            'txtheight'       : .95,                #where to draw text. plot top=1
-            'txt_margin'      : 0.05,               #offsets for shape annotators
-            'spacing'         : 0.05,               #horizontal space between shapes
-            'maxHeight'       : 0.65               #no higher than 2/3
+            'txtheight'       : .8,                #where to draw text. plot top=1
+            'txt_margin'      : 0.025,               #offsets for shape annotators
+            'spacing'         : 0.025,               #horizontal space between shapes
         }
         #how far deep layers go to back
         self.param['depth_spacing'] = .7*self.param['spacing']
@@ -109,26 +115,37 @@ class Layer(object):
         return (width, height, depth)
 
     def graphshow(self, title=None):
-        fig = plt.figure()
+        fig = plt.figure(figsize=(10,10))
         ax = fig.add_subplot(111)
         plt.axis('off')
+        # plt.tight_layout()
+        plt.subplots_adjust(left=0, right=1, top=0.95, bottom=0.05)
         plt.ylim(0, 1)
-        if(title is not None):
-            plt.text(0.5, 1.05, title, horizontalalignment='center')
 
         # get max shapes
         maxShape = self.calcMaxShape()
+        # self.param['txtheight'] = maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w']) + 4*self.param['txt_margin']
+        self.param['txtheight'] = 0.5 - .5 * maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w']) - 2*self.param['txt_margin']
+        self.param['titleheight'] = 0.5 + .5 * maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w']) + 4*self.param['txt_margin']
+
+        # show title
+        if(title is not None):
+            plt.text(0.5, self.param['titleheight'], title, horizontalalignment='center')
 
         # set layer plotting properties
         xy = {'x':0,'y':0}
         for layer in self.graph:
             shp = layer.shape
             layer.width     = self._width2w(shp[0])
-            layer.height    = shp[1] / maxShape['h'] * self.param['maxHeight']
+            # layer.height    = shp[1] / maxShape['h'] * (shp[1] * layer.width / shp[0])
+            layer.height    = shp[1] / shp[0] * layer.width
             layer.depth     = shp[2] / maxShape['d'] if len(shp) > 2 else 0
             layer.maxShape  = maxShape
 
-            xy['y'] = .5 * self.param['maxHeight'] - .5 * layer.height + self.param['txt_margin']
+            # xy['y'] = .5 * (maxShape['h'] / maxShape['w'] * layer.width) - .25 * layer.height + self.param['txt_margin']
+            # xy['y'] = .5 * (maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w'])) - .5 * layer.height + self.param['txt_margin']
+            xy['y'] = .5 - .5 * layer.height + self.param['txt_margin']
+
             layer.xy        = dict(xy)
 
             # Update x position
@@ -165,12 +182,40 @@ class Dropout(Layer):
         Layer.__init__(self, layer, shape)
 
 class Concat(Layer):
+    nConcatsUsed = 0
+    concat_spacing = 0
+
     def __init__(self, layer, extra_input_layers):
         shape = list(layer.shape)
         for input_layer in extra_input_layers:
             shape[2] += list(input_layer.shape)[2] if len(input_layer.shape) > 2 else 0
 
         Layer.__init__(self, layer, shape)
+        self.input_layers = extra_input_layers
+
+        Concat.nConcatsUsed += 1
+        self.concat_spacing = 0.025 / Concat.nConcatsUsed #txt margin?
+
+    def show(self, axes, param, inputs=[]):
+        """Plot this layer"""
+        draw_tensor(self, axes, param)
+        annotate_tensor(self, param)
+        add_layer_name(self, param)
+
+        # connect input layers to this layer
+        # down = list(kernel_pos)
+        # down[0] = down[0] + self.kernel_rel[0]
+        # up = list(down)
+        # up[1] += self.kernel_rel[1]
+        # dest = dict(self.xy)
+        # dest['y'] += self.height
+        yPos = self.xy['y'] - param['txt_margin'] - Concat.nConcatsUsed * self.concat_spacing
+        for idx, layer in enumerate(self.input_layers):
+            # downwards spacing
+            plt.plot([layer.xy['x'], layer.xy['x']], [layer.xy['y'], yPos], linewidth=1, color=(0,0,0))
+            plt.plot([self.xy['x'], self.xy['x']], [self.xy['y'], yPos], linewidth=1, color=(0,0,0))
+            # horizontal connection
+            plt.plot([layer.xy['x'], self.xy['x']], [yPos, yPos], linewidth=1, color=(0,0,0))
 
 class FullyConnected(Layer):
     def __init__(self, layer, neurons):
