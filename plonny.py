@@ -55,6 +55,8 @@ def draw_tensor(self, axes, param):
                                     linewidth=1)#, edgecolor='r', facecolor='none'
         axes.add_patch(rect)
 
+    print("xy: ", self.xy, " w: ", self.width, " h: ", self.height)
+
 
 def show_basiclayer(self, axes, param, inputs=[]):
     """Default plot for Input and Layer"""
@@ -62,12 +64,47 @@ def show_basiclayer(self, axes, param, inputs=[]):
     annotate_tensor(self, param)
     add_layer_name(self, param)
 
+def calcMaxShape(graph):
+    """Returns maximum dimensions of all layer outputs"""
+    maxShape = [0,0,0]
+    for layer in graph:
+        for dim in range(len(layer.shape)):
+            if layer.shape[dim] > maxShape[dim]:
+                maxShape[dim] = layer.shape[dim]
+    return {'w':maxShape[0], 'h':maxShape[1], 'd':maxShape[2]}
+
+def setDims(self, graph=None):
+    """Sets coordinate space dimensions, given this layers shape"""
+    graph = self.graph if graph is None else graph
+
+    self.maxShape  = calcMaxShape(graph)
+    self.width     = self.convertWidth(self.shape[0], graph)
+    # layer.height    = shp[1] / maxShape['h'] * (shp[1] * layer.width / shp[0])
+    self.height    = self.shape[1] / self.shape[0] * self.width
+    self.depth     = self.shape[2] / self.maxShape['d'] if len(self.shape) > 2 else 0
+
+def _width2w(self, width, graph=None):
+    """Convert width in shape space to coordinate space width"""
+    graph = self.graph if graph is None else graph
+
+    spacings = self.param['spacing'] * len(graph)
+    totalwidths = np.sum([layer.shape[0] for layer in graph])
+    return width / totalwidths * (1 - spacings)
+
 class Input(object):
     def __init__(self, shape):
         self.shape = shape
         self.graph = [self]
 
+        self.param = {
+            'txtheight'       : .8,                #where to draw text. plot top=1
+            'txt_margin'      : 0.025,               #offsets for shape annotators
+            'spacing'         : 0.025,               #horizontal space between shapes
+        }
+
     show = show_basiclayer
+    setDimensions = setDims
+    convertWidth = _width2w
 
 class Layer(object):
     def __init__(self, layer, shape):
@@ -85,25 +122,8 @@ class Layer(object):
         self.param['depth_spacing'] = .7*self.param['spacing']
 
     show = show_basiclayer
-
-    def _width2w(self, width, graph=None):
-        """Convert width in shape space to coordinate space width"""
-        graph = self.graph if graph is None else graph
-
-        spacings = self.param['spacing'] * (len(graph)-1)
-        totalwidths = np.sum([layer.shape[0] for layer in graph])
-        return width / totalwidths * (1 - spacings)
-
-    def calcMaxShape(self, graph=None):
-        """Returns maximum dimensions of all layer outputs"""
-        graph = self.graph if graph is None else graph
-
-        maxShape = [0,0,0]
-        for layer in graph:
-            for dim in range(len(layer.shape)):
-                if layer.shape[dim] > maxShape[dim]:
-                    maxShape[dim] = layer.shape[dim]
-        return {'w':maxShape[0], 'h':maxShape[1], 'd':maxShape[2]}
+    setDimensions = setDims
+    convertWidth = _width2w
 
     def output_shape(self, graph=None):
         """Returns output shape of this layer"""
@@ -117,16 +137,17 @@ class Layer(object):
     def graphshow(self, title=None):
         fig = plt.figure(figsize=(10,10))
         ax = fig.add_subplot(111)
-        plt.axis('off')
+        # plt.axis('off')
         # plt.tight_layout()
-        plt.subplots_adjust(left=0, right=1, top=0.95, bottom=0.05)
+        # plt.subplots_adjust(left=0, right=1, top=0.95, bottom=0.05)
         plt.ylim(0, 1)
+        plt.xlim(0, 1)
 
         # get max shapes
-        maxShape = self.calcMaxShape()
+        maxShape = calcMaxShape(self.graph)
         # self.param['txtheight'] = maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w']) + 4*self.param['txt_margin']
-        self.param['txtheight'] = 0.5 - .5 * maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w']) - 2*self.param['txt_margin']
-        self.param['titleheight'] = 0.5 + .5 * maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w']) + 4*self.param['txt_margin']
+        self.param['txtheight'] = 0.5 - .5 * maxShape['h'] / maxShape['w'] * self.convertWidth(maxShape['w']) - 2*self.param['txt_margin']
+        self.param['titleheight'] = 0.5 + .5 * maxShape['h'] / maxShape['w'] * self.convertWidth(maxShape['w']) + 4*self.param['txt_margin']
 
         # show title
         if(title is not None):
@@ -135,12 +156,7 @@ class Layer(object):
         # set layer plotting properties
         xy = {'x':0,'y':0}
         for layer in self.graph:
-            shp = layer.shape
-            layer.width     = self._width2w(shp[0])
-            # layer.height    = shp[1] / maxShape['h'] * (shp[1] * layer.width / shp[0])
-            layer.height    = shp[1] / shp[0] * layer.width
-            layer.depth     = shp[2] / maxShape['d'] if len(shp) > 2 else 0
-            layer.maxShape  = maxShape
+            layer.setDimensions(self.graph)
 
             # xy['y'] = .5 * (maxShape['h'] / maxShape['w'] * layer.width) - .25 * layer.height + self.param['txt_margin']
             # xy['y'] = .5 * (maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w'])) - .5 * layer.height + self.param['txt_margin']
@@ -202,13 +218,7 @@ class Concat(Layer):
         annotate_tensor(self, param)
         add_layer_name(self, param)
 
-        # connect input layers to this layer
-        # down = list(kernel_pos)
-        # down[0] = down[0] + self.kernel_rel[0]
-        # up = list(down)
-        # up[1] += self.kernel_rel[1]
-        # dest = dict(self.xy)
-        # dest['y'] += self.height
+        # show connections to input tensors
         yPos = self.xy['y'] - param['txt_margin'] - Concat.nConcatsUsed * self.concat_spacing
         for idx, layer in enumerate(self.input_layers):
             # downwards spacing
@@ -218,9 +228,22 @@ class Concat(Layer):
             plt.plot([layer.xy['x'], self.xy['x']], [yPos, yPos], linewidth=1, color=(0,0,0))
 
 class FullyConnected(Layer):
+    FClayers = []
+
     def __init__(self, layer, neurons):
         shape = (1, neurons)
         Layer.__init__(self, layer, shape)
+
+        FullyConnected.FClayers += [neurons]
+
+    def setDimensions(self, graph=None):
+        """Sets coordinate space dimensions, given this layers shape"""
+        graph = self.graph if graph is None else graph
+
+        self.maxShape  = calcMaxShape(graph)
+        self.width     = self.convertWidth(self.shape[0], graph)
+        self.height    = self.shape[1] / np.max(FullyConnected.FClayers) * .5
+        self.depth     = self.shape[2] / self.maxShape['d'] if len(self.shape) > 2 else 0
 
     def show(self, axes, param, inputs=[]):
         """Plot this layer"""
@@ -228,9 +251,11 @@ class FullyConnected(Layer):
         add_layer_name(self, param)
 
         n_neurons = self.shape[1]
+        print(self.height)
         for neuron in range(n_neurons):
             # draw neurons
             color = (.4, .5, 1)
+
             xyn = dict(self.xy)
             xyn['y'] += neuron * self.height / n_neurons
             circ = patches.Circle(      tuple(xyn.values()),
@@ -239,13 +264,13 @@ class FullyConnected(Layer):
                                         linewidth=1)
             axes.add_patch(circ)
 
-            # draw connections
-            color = (0, 0, 0)
-            for layer in inputs:
-                for vert in range(layer.shape[1]):
-                    xy_dest = ( layer.xy['x'] + layer.width,
-                                layer.xy['y'] + (vert/layer.shape[1]) * layer.height)
-                    plt.plot([xyn['x'], xy_dest[0]], [xyn['y'], xy_dest[1]], linewidth=.1, alpha=0.3, color=color)
+        color = (0, 0, 0)
+        for layer in inputs:
+            xy_src = ( layer.xy['x'] + layer.width, layer.xy['y'])
+            plt.plot([xy_src[0], xyn['x']], [xy_src[1]+layer.height, xyn['y'] - self.height], linewidth=.5, alpha=.9, color=color)
+            plt.plot([xy_src[0], xyn['x']], [xy_src[1]+layer.height, xyn['y']], linewidth=.5, alpha=.9, color=color)
+            plt.plot([xy_src[0], xyn['x']], [xy_src[1], xyn['y'] - self.height], linewidth=.5, alpha=.9, color=color)
+            plt.plot([xy_src[0], xyn['x']], [xy_src[1], xyn['y']], linewidth=.5, alpha=.9, color=color)
 
 class Conv2D(Layer):
     """2D Convolution"""
