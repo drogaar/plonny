@@ -137,21 +137,15 @@ class Layer(object):
     def graphshow(self, title=None):
         fig = plt.figure(figsize=(10,10))
         ax = fig.add_subplot(111)
-        # plt.axis('off')
+        plt.axis('off')
         # plt.tight_layout()
-        # plt.subplots_adjust(left=0, right=1, top=0.95, bottom=0.05)
+        plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
         plt.ylim(0, 1)
         plt.xlim(0, 1)
 
         # get max shapes
         maxShape = calcMaxShape(self.graph)
         # self.param['txtheight'] = maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w']) + 4*self.param['txt_margin']
-        self.param['txtheight'] = 0.5 - .5 * maxShape['h'] / maxShape['w'] * self.convertWidth(maxShape['w']) - 2*self.param['txt_margin']
-        self.param['titleheight'] = 0.5 + .5 * maxShape['h'] / maxShape['w'] * self.convertWidth(maxShape['w']) + 4*self.param['txt_margin']
-
-        # show title
-        if(title is not None):
-            plt.text(0.5, self.param['titleheight'], title, horizontalalignment='center')
 
         # set layer plotting properties
         xy = {'x':0,'y':0}
@@ -166,6 +160,13 @@ class Layer(object):
 
             # Update x position
             xy['x'] += layer.width + self.param['spacing']
+
+        maxheight = np.max([layer.height for layer in self.graph])
+        self.param['txtheight'] = 0.5 - .5 * maxheight - 2*self.param['txt_margin']
+        self.param['titleheight'] = 0.5 + .5 * maxheight + 4*self.param['txt_margin']
+        # show title
+        if(title is not None):
+            plt.text(0.5, self.param['titleheight'], title, horizontalalignment='center')
 
         # Iterate layers, plotting their output shapes
         for ctr, layer in enumerate(self.graph):
