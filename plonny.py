@@ -8,33 +8,21 @@ sns.set()
 
 def annotate_tensor(self, param, showdims=(True, True, True)):
     """Annotates an output shape with its dimensions."""
-    fontsize = 8
-    # width
-    if showdims[0]:
-        plt.text(   self.xy['x']+.5*self.width,
-                    self.xy['y']-param['txt_margin'],
-                    # self.xy['y'],
-                    self.shape[0], rotation=0, size=fontsize)
+    def addtext(text, x_offset=0, y_offset=0, rotation=0):
+        fontsize = 8
+        plt.text(   self.xy['x'] + x_offset,
+                    self.xy['y'] + y_offset,
+                    text, rotation=rotation, size=fontsize)
 
-    # height
-    if showdims[1]:
-        t = plt.text(   self.xy['x'],
-                    self.xy['y'] + .5*self.height,
-                    self.shape[1], rotation=90, size=fontsize)
-        # bb = t.get_window_extent(renderer=r)height
-        # param['txtheight'] = 0.5 - t.get_window_extent(renderer=plt.gcf().canvas.get_renderer()).height
-        # print(param['txtheight'])
-
-    # depth
-    if len(self.shape) > 2 and showdims[2]:
-        plt.text(   self.xy['x'],
-                    self.xy['y'] + self.height + param['txt_margin'],
-                    # self.xy['y'] + self.height,
-                    self.shape[2], rotation=45, size=fontsize)
+    if showdims[0]:                                 # width
+        addtext(self.shape[0], x_offset = .5*self.width, y_offset = -param['txt_margin'])
+    if showdims[1]:                                 # height
+        addtext(self.shape[1], y_offset = .5*self.height, rotation=90)
+    if showdims[2] and len(self.shape) > 2:         # depth
+        addtext(self.shape[2], y_offset = self.height + param['txt_margin'], rotation=45)
 
 def add_layer_name(self, param):
     """Adds the layers name to plot."""
-    # plt.text(self.xy['x'], 0.5 - 2*param['txt_margin'], type(self).__name__, rotation=90)
     plt.text(self.xy['x'], param['txtheight'], type(self).__name__, rotation=90)
 
 def draw_tensor(self, axes, param):
@@ -43,10 +31,9 @@ def draw_tensor(self, axes, param):
     for z in reversed(range(shape2)):
         # Color calculation
         d = (1 - z/shape2) * 0.8 + 0.2
-        color = tuple([.4* d, .5* d, 1* d])
+        color = tuple(np.array(GraphParam.tensorColor) * d)
 
         # draw output shape
-        # print((self.depth))
         xyd = {key: self.xy[key] + param['depth_spacing'] * (z/shape2*self.depth) for key in self.xy.keys()}
         rect = patches.Rectangle(   tuple(xyd.values()),
                                     self.width,
@@ -56,7 +43,6 @@ def draw_tensor(self, axes, param):
         axes.add_patch(rect)
 
     print("xy: ", self.xy, " w: ", self.width, " h: ", self.height)
-
 
 def show_basiclayer(self, axes, param, inputs=[]):
     """Default plot for Input and Layer"""
@@ -79,7 +65,6 @@ def setDims(self, graph=None):
 
     self.maxShape  = calcMaxShape(graph)
     self.width     = self.convertWidth(self.shape[0], graph)
-    # layer.height    = shp[1] / maxShape['h'] * (shp[1] * layer.width / shp[0])
     self.height    = self.shape[1] / self.shape[0] * self.width
     self.depth     = self.shape[2] / self.maxShape['d'] if len(self.shape) > 2 else 0
 
@@ -90,6 +75,28 @@ def _width2w(self, width, graph=None):
     spacings = self.param['spacing'] * len(graph)
     totalwidths = np.sum([layer.shape[0] for layer in graph])
     return width / totalwidths * (1 - spacings)
+
+def defineFigure():
+    """Setup plot"""
+    fig = plt.figure(figsize=(10,10))
+    axes = fig.add_subplot(111)
+    plt.axis('off')
+    plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
+    plt.ylim(0, 1)
+    plt.xlim(0, 1)
+    return axes
+
+
+
+class GraphParam:
+    tensorColor =   (.4, .5, 1)
+    lineColor   =   (0, 0, 0)
+
+    # The plot space is defined as x in [0,1], y in [0,1]
+    txt_margin  =   0.025           #offsets for shape annotators
+    spacing     =   0.025           #horizontal space between shapes
+
+
 
 class Input(object):
     def __init__(self, shape):
@@ -105,6 +112,8 @@ class Input(object):
     show = show_basiclayer
     setDimensions = setDims
     convertWidth = _width2w
+
+
 
 class Layer(object):
     def __init__(self, layer, shape):
@@ -134,48 +143,33 @@ class Layer(object):
         depth = shp[2] if len(shp) > 2 else 1
         return (width, height, depth)
 
-    def graphshow(self, title=None):
-        fig = plt.figure(figsize=(10,10))
-        ax = fig.add_subplot(111)
-        plt.axis('off')
-        # plt.tight_layout()
-        plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
-        plt.ylim(0, 1)
-        plt.xlim(0, 1)
-
-        # get max shapes
-        maxShape = calcMaxShape(self.graph)
-        # self.param['txtheight'] = maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w']) + 4*self.param['txt_margin']
+    def graphshow(self, title="Neural Network"):
+        ax = defineFigure()
 
         # set layer plotting properties
         xy = {'x':0,'y':0}
         for layer in self.graph:
             layer.setDimensions(self.graph)
-
-            # xy['y'] = .5 * (maxShape['h'] / maxShape['w'] * layer.width) - .25 * layer.height + self.param['txt_margin']
-            # xy['y'] = .5 * (maxShape['h'] / maxShape['w'] * self._width2w(maxShape['w'])) - .5 * layer.height + self.param['txt_margin']
             xy['y'] = .5 - .5 * layer.height + self.param['txt_margin']
-
             layer.xy        = dict(xy)
 
             # Update x position
             xy['x'] += layer.width + self.param['spacing']
 
+        # set titles locations and plot
         maxheight = np.max([layer.height for layer in self.graph])
-        self.param['txtheight'] = 0.5 - .5 * maxheight - 2*self.param['txt_margin']
+        self.param['txtheight']  = 0.5 - .5 * maxheight - 2*self.param['txt_margin']
         self.param['titleheight'] = 0.5 + .5 * maxheight + 4*self.param['txt_margin']
-        # show title
-        if(title is not None):
-            plt.text(0.5, self.param['titleheight'], title, horizontalalignment='center')
+        plt.text(0.5, self.param['titleheight'], title, horizontalalignment='center')
 
         # Iterate layers, plotting their output shapes
-        for ctr, layer in enumerate(self.graph):
-            if(ctr>0):
-                layer.show(ax, self.param, [self.graph[ctr-1]])
-            else:
-                layer.show(ax, self.param)
+        self.graph[0].show(ax, self.param)
+        for ctr, layer in enumerate(self.graph[1:], 1):
+            layer.show(ax, self.param, [self.graph[ctr-1]])
 
         plt.show()
+
+
 
 class Pool(Layer):
     def __init__(self, layer, shape):
@@ -197,6 +191,8 @@ class Upsample(Layer):
 class Dropout(Layer):
     def __init__(self, layer, shape):
         Layer.__init__(self, layer, shape)
+
+
 
 class Concat(Layer):
     nConcatsUsed = 0
@@ -223,10 +219,12 @@ class Concat(Layer):
         yPos = self.xy['y'] - param['txt_margin'] - Concat.nConcatsUsed * self.concat_spacing
         for idx, layer in enumerate(self.input_layers):
             # downwards spacing
-            plt.plot([layer.xy['x'], layer.xy['x']], [layer.xy['y'], yPos], linewidth=1, color=(0,0,0))
-            plt.plot([self.xy['x'], self.xy['x']], [self.xy['y'], yPos], linewidth=1, color=(0,0,0))
+            plt.plot([layer.xy['x'], layer.xy['x']], [layer.xy['y'], yPos], linewidth=1, color=GraphParam.lineColor)
+            plt.plot([self.xy['x'], self.xy['x']], [self.xy['y'], yPos], linewidth=1, color=GraphParam.lineColor)
             # horizontal connection
-            plt.plot([layer.xy['x'], self.xy['x']], [yPos, yPos], linewidth=1, color=(0,0,0))
+            plt.plot([layer.xy['x'], self.xy['x']], [yPos, yPos], linewidth=1, color=GraphParam.lineColor)
+
+
 
 class FullyConnected(Layer):
     FClayers = []
@@ -251,27 +249,26 @@ class FullyConnected(Layer):
         annotate_tensor(self, param, (False,True,False))
         add_layer_name(self, param)
 
+        # draw neurons
         n_neurons = self.shape[1]
-        print(self.height)
         for neuron in range(n_neurons):
-            # draw neurons
-            color = (.4, .5, 1)
-
             xyn = dict(self.xy)
             xyn['y'] += neuron * self.height / n_neurons
             circ = patches.Circle(      tuple(xyn.values()),
                                         radius = 0.1 * self.height / n_neurons,
-                                        color=color,
+                                        color=GraphParam.tensorColor,
                                         linewidth=1)
             axes.add_patch(circ)
 
-        color = (0, 0, 0)
+        # draw connections
         for layer in inputs:
             xy_src = ( layer.xy['x'] + layer.width, layer.xy['y'])
-            plt.plot([xy_src[0], xyn['x']], [xy_src[1]+layer.height, xyn['y'] - self.height], linewidth=.5, alpha=.9, color=color)
-            plt.plot([xy_src[0], xyn['x']], [xy_src[1]+layer.height, xyn['y']], linewidth=.5, alpha=.9, color=color)
-            plt.plot([xy_src[0], xyn['x']], [xy_src[1], xyn['y'] - self.height], linewidth=.5, alpha=.9, color=color)
-            plt.plot([xy_src[0], xyn['x']], [xy_src[1], xyn['y']], linewidth=.5, alpha=.9, color=color)
+            plt.plot([xy_src[0], xyn['x']], [xy_src[1]+layer.height, xyn['y'] - self.height], linewidth=.5, alpha=.9, color=GraphParam.lineColor)
+            plt.plot([xy_src[0], xyn['x']], [xy_src[1]+layer.height, xyn['y']], linewidth=.5, alpha=.9, color=GraphParam.lineColor)
+            plt.plot([xy_src[0], xyn['x']], [xy_src[1], xyn['y'] - self.height], linewidth=.5, alpha=.9, color=GraphParam.lineColor)
+            plt.plot([xy_src[0], xyn['x']], [xy_src[1], xyn['y']], linewidth=.5, alpha=.9, color=GraphParam.lineColor)
+
+
 
 class Conv2D(Layer):
     """2D Convolution"""
@@ -287,13 +284,12 @@ class Conv2D(Layer):
 
         # draw kernel
         input = inputs[0]
-        kerncol = (0, 0, 0)
         self.kernel_rel = (self.kernel[0] * input.width / input.shape[0], self.kernel[1] * input.height / input.shape[1])
         kernel_pos = (input.xy['x'] + input.width - self.kernel_rel[0], input.xy['y'] + input.height - self.kernel_rel[1])
         rect = patches.Rectangle(   kernel_pos,
                                     self.kernel_rel[0],
                                     self.kernel_rel[1],
-                                    color=kerncol,
+                                    color=GraphParam.lineColor,
                                     alpha=.6,
                                     linewidth=1)#, edgecolor='r', facecolor='none'
         axes.add_patch(rect)
@@ -305,5 +301,5 @@ class Conv2D(Layer):
         up[1] += self.kernel_rel[1]
         dest = dict(self.xy)
         dest['y'] += self.height
-        plt.plot([down[0], dest['x']], [down[1], dest['y']], linewidth=.5, alpha=0.9, color=kerncol)
-        plt.plot([up[0], dest['x']], [up[1], dest['y']], linewidth=.5, alpha=0.9, color=kerncol)
+        plt.plot([down[0], dest['x']], [down[1], dest['y']], linewidth=.5, alpha=0.9, color=GraphParam.lineColor)
+        plt.plot([up[0], dest['x']], [up[1], dest['y']], linewidth=.5, alpha=0.9, color=GraphParam.lineColor)
