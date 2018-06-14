@@ -279,3 +279,9 @@ class Conv2D(Layer):
         dest['y'] += self.height
         plt.plot([down[0], dest['x']], [down[1], dest['y']], linewidth=.5, alpha=0.9, color=GraphParam.lineColor)
         plt.plot([up[0], dest['x']], [up[1], dest['y']], linewidth=.5, alpha=0.9, color=GraphParam.lineColor)
+
+class Conv1D(Conv2D):
+    """1D Convolution"""
+    def __init__(self, layer, shape, kernel):
+        self.kernel = kernel
+        Conv2D.__init__(self, layer, shape, (1, kernel))
