@@ -52,6 +52,7 @@ def calcMaxShape(graph):
     """Returns maximum dimensions of all layer outputs"""
     maxShape = [0,0,0]
     for layer in graph:
+        # print("layer: ", layer.shape)
         for dim in range(len(layer.shape)):
             if layer.shape[dim] > maxShape[dim]:
                 maxShape[dim] = layer.shape[dim]
@@ -65,6 +66,29 @@ def setDims(self, graph=None):
     self.width     = self.convertWidth(self.shape[0], graph)
     self.height    = self.shape[1] / self.shape[0] * self.width
     self.depth     = self.shape[2] / self.maxShape['d'] if len(self.shape) > 2 else 0
+
+def setDimsBy(self, horizontal, vertical):
+    """Given a row and column of layers, set self's proper width and height."""
+
+    def scaleDim(dim, direction, spacing=False):
+        """Convert shape space width or height to screen space dimension"""
+        spacing = GraphParam.spacing if not spacing else spacing
+        spacings = spacing * (len(direction) - 1)
+        totalDims = np.sum([layer.shape[dim] for layer in direction])
+        print("res: ")
+        print(spacing)
+        print(spacings)
+        print([layer.shape[dim] for layer in direction])
+        return self.shape[dim] / totalDims * (1 - spacings)
+
+    self.maxShape_h  = calcMaxShape(horizontal)
+    # self.maxShape_v  = calcMaxShape(vertical)
+
+    self.width     = scaleDim(0, horizontal)
+    self.height    = self.shape[1] / self.shape[0] * self.width
+    self.depth     = self.shape[2] / self.maxShape_h['d'] if len(self.shape) > 2 else 0
+    # TODO: global max depth to be set.
+    # TODO: dynamic layer height
 
 def _width2w(self, width, graph=None):
     """Convert width in shape space to coordinate space width"""
@@ -100,73 +124,76 @@ class GraphParam:
 class Input(object):
     def __init__(self, shape):
         self.shape = shape
-        self.graph = [self]
+        # self.graph = [self]
+
+        self.inbound = []
 
     show = show_basiclayer
-    setDimensions = setDims
+    setDimensions = setDimsBy
     convertWidth = _width2w
 
 
 
 class Layer(object):
-    def __init__(self, layer, shape):
-        if(not isinstance(layer, Layer) and not isinstance(layer, Input)):
-            raise AssertionError("A new layer was requested attached to neither a layer or an input.", str(layer))
-        self.graph = layer.graph + [self]
+    def __init__(self, shape, layer=None):
         self.shape = shape
+        self.inbound = []
+
+        if layer is not None:
+            self.inbound = [layer]
 
     show = show_basiclayer
-    setDimensions = setDims
+    setDimensions = setDimsBy
     convertWidth = _width2w
 
-    def graphshow(self, title="Neural Network"):
-        ax = defineFigure()
-
-        # set layer plotting properties
-        xy = {'x':0,'y':0}
-        for layer in self.graph:
-            layer.setDimensions(self.graph)
-            xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
-            layer.xy        = dict(xy)
-
-            # Update x position
-            xy['x'] += layer.width + GraphParam.spacing
-
-        # set titles locations and plot
-        maxheight = np.max([layer.height for layer in self.graph])
-        GraphParam.txt_height = 0.5 - .5 * maxheight - 2*GraphParam.txt_margin
-        GraphParam.titleheight = 0.5 + .5 * maxheight + 4*GraphParam.txt_margin
-        plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
-
-        # Iterate layers, plotting their output shapes
-        self.graph[0].show(ax)
-        for current, layer in enumerate(self.graph[1:], 1):
-            layer.show(ax, [self.graph[current-1]])
-
-        plt.show()
+    # def graphshow(self, title="Neural Network"):
+    #     ax = defineFigure()
+    #
+    #     # set layer plotting properties
+    #     xy = {'x':0,'y':0}
+    #     for layer in self.graph:
+    #         layer.setDimensions(self.graph)
+    #         xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
+    #         layer.xy        = dict(xy)
+    #
+    #         # Update x position
+    #         xy['x'] += layer.width + GraphParam.spacing
+    #
+    #     # set titles locations and plot
+    #     maxheight = np.max([layer.height for layer in self.graph])
+    #     GraphParam.txt_height = 0.5 - .5 * maxheight - 2*GraphParam.txt_margin
+    #     GraphParam.titleheight = 0.5 + .5 * maxheight + 4*GraphParam.txt_margin
+    #     plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
+    #
+    #     # Iterate layers, plotting their output shapes
+    #     self.graph[0].show(ax)
+    #     for current, layer in enumerate(self.graph[1:], 1):
+    #         layer.show(ax, [self.graph[current-1]])
+    #
+    #     plt.show()
 
 
 
 class Pool(Layer):
-    def __init__(self, layer, shape):
-        Layer.__init__(self, layer, shape)
+    def __init__(self, shape, layer=None):
+        Layer.__init__(self, shape, layer)
 
 class Reshape(Layer):
-    def __init__(self, layer, shape):
-        Layer.__init__(self, layer, shape)
+    def __init__(self, shape, layer=None):
+        Layer.__init__(self, shape, layer)
 
 class CTC(Layer):
     """Connectionist Temporal Classification"""
-    def __init__(self, layer, shape):
-        Layer.__init__(self, layer, shape)
+    def __init__(self, shape, layer=None):
+        Layer.__init__(self, shape, layer)
 
 class Upsample(Layer):
-    def __init__(self, layer, shape):
-        Layer.__init__(self, layer, shape)
+    def __init__(self, shape, layer=None):
+        Layer.__init__(self, shape, layer)
 
 class Dropout(Layer):
-    def __init__(self, layer, shape):
-        Layer.__init__(self, layer, shape)
+    def __init__(self, shape, layer=None):
+        Layer.__init__(self, shape, layer)
 
 
 
@@ -174,7 +201,7 @@ class Concat(Layer):
     nConcatsUsed = 0
     concat_spacing = 0
 
-    def __init__(self, layer, extra_input_layers):
+    def __init__(self, extra_input_layers, layer=None):
         shape = list(layer.shape)
         for input_layer in extra_input_layers:
             shape[2] += list(input_layer.shape)[2] if len(input_layer.shape) > 2 else 0
@@ -249,7 +276,7 @@ class FullyConnected(Layer):
 class Conv2D(Layer):
     """2D Convolution"""
     def __init__(self, layer, shape, kernel):
-        Layer.__init__(self, layer, shape)
+        Layer.__init__(self, shape, layer)
         self.kernel = kernel
 
     def show(self, axes, inputs=[]):
