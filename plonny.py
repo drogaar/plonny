@@ -52,20 +52,10 @@ def calcMaxShape(graph):
     """Returns maximum dimensions of all layer outputs"""
     maxShape = [0,0,0]
     for layer in graph:
-        # print("layer: ", layer.shape)
         for dim in range(len(layer.shape)):
             if layer.shape[dim] > maxShape[dim]:
                 maxShape[dim] = layer.shape[dim]
     return {'w':maxShape[0], 'h':maxShape[1], 'd':maxShape[2]}
-
-def setDims(self, graph=None):
-    """Sets coordinate space dimensions, given this layers shape"""
-    graph = self.graph if graph is None else graph
-
-    self.maxShape  = calcMaxShape(graph)
-    self.width     = self.convertWidth(self.shape[0], graph)
-    self.height    = self.shape[1] / self.shape[0] * self.width
-    self.depth     = self.shape[2] / self.maxShape['d'] if len(self.shape) > 2 else 0
 
 def setDimsBy(self, horizontal, vertical):
     """Given a row and column of layers, set self's proper width and height."""
@@ -90,25 +80,6 @@ def setDimsBy(self, horizontal, vertical):
     # TODO: global max depth to be set.
     # TODO: dynamic layer height
 
-def _width2w(self, width, graph=None):
-    """Convert width in shape space to coordinate space width"""
-    graph = self.graph if graph is None else graph
-
-    spacings = GraphParam.spacing * len(graph)
-    totalwidths = np.sum([layer.shape[0] for layer in graph])
-    return width / totalwidths * (1 - spacings)
-
-def defineFigure():
-    """Setup plot"""
-    fig = plt.figure(figsize=(10,10))
-    axes = fig.add_subplot(111)
-    plt.axis('off')
-    plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
-    plt.ylim(0, 1)
-    plt.xlim(0, 1)
-    return axes
-
-
 
 class GraphParam:
     tensorColor     =   (.4, .5, 1)
@@ -118,19 +89,6 @@ class GraphParam:
     txt_margin      =   0.025           #offsets for shape annotators
     spacing         =   0.025           #horizontal space between shapes
     depth_spacing   =   .7 * spacing    #3D tensor depth
-
-
-
-class Input(object):
-    def __init__(self, shape):
-        self.shape = shape
-        # self.graph = [self]
-
-        self.inbound = []
-
-    show = show_basiclayer
-    setDimensions = setDimsBy
-    convertWidth = _width2w
 
 
 
@@ -144,35 +102,10 @@ class Layer(object):
 
     show = show_basiclayer
     setDimensions = setDimsBy
-    convertWidth = _width2w
 
-    # def graphshow(self, title="Neural Network"):
-    #     ax = defineFigure()
-    #
-    #     # set layer plotting properties
-    #     xy = {'x':0,'y':0}
-    #     for layer in self.graph:
-    #         layer.setDimensions(self.graph)
-    #         xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
-    #         layer.xy        = dict(xy)
-    #
-    #         # Update x position
-    #         xy['x'] += layer.width + GraphParam.spacing
-    #
-    #     # set titles locations and plot
-    #     maxheight = np.max([layer.height for layer in self.graph])
-    #     GraphParam.txt_height = 0.5 - .5 * maxheight - 2*GraphParam.txt_margin
-    #     GraphParam.titleheight = 0.5 + .5 * maxheight + 4*GraphParam.txt_margin
-    #     plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
-    #
-    #     # Iterate layers, plotting their output shapes
-    #     self.graph[0].show(ax)
-    #     for current, layer in enumerate(self.graph[1:], 1):
-    #         layer.show(ax, [self.graph[current-1]])
-    #
-    #     plt.show()
-
-
+class Input(Layer):
+    def __init__(self, shape):
+        Layer.__init__(self, shape)
 
 class Pool(Layer):
     def __init__(self, shape, layer=None):
