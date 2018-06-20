@@ -58,24 +58,32 @@ class Graph(object):
         print("ss_row_heights", ss_row_heights)
 
         # set layer plotting properties
-        # xy = {'x':.5 * (1 - np.sum(ss_col_widths)), 'y':.5 * (1 - np.sum(ss_row_heights))}
-        # for rowIdx in range(len(self.lgrid.rows())):
-        #     for colIdx in range(len(self.lgrid.cols())):
-        #         xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
-        #         layer.xy        = dict(xy)
-        #         layer.xy['y']   -= layer.height + GraphParam.txt_margin
+        xy_start = {  'x':.5 * (1 - np.sum(ss_col_widths) - GraphParam.spacing * (len(ss_col_widths)-1)),
+                'y':.5 * (1 - np.sum(ss_row_heights) - 0)} #use text spacing
+        xy = dict(xy_start)
+        for rowIdx, row in enumerate(self.lgrid.rows()):
+            xy['x'] = xy_start['x']
+
+            for colIdx, col in enumerate(self.lgrid.cols()):
+                # xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
+                layer = self.lgrid.get(rowIdx, colIdx)
+                if(layer is not None):
+                    layer.xy        = dict(xy)
+                    layer.xy['y']   -= .5 * layer.height + GraphParam.txt_margin
+                    print("layer.xy", layer.xy)
+
+                xy['x'] += ss_col_widths[colIdx] + GraphParam.spacing
+            xy['y'] -= ss_row_heights[rowIdx] + GraphParam.txt_margin #Use text spacing
+
+        # xy = {'x':.5 * (1 - np.sum([width for width in ss_col_widths])),'y':0}
+        # for colIdx, layer in enumerate(self.lgrid.grid[0]):
+        #     # layer.setDimensions(self.lgrid.grid[0], [self.lgrid.grid[0][0]])
+        #     xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
+        #     layer.xy        = dict(xy)
         #
-        #         xy['x'] += ss_col_widths[colIdx] + GraphParam.spacing
-
-        xy = {'x':.5 * (1 - np.sum([width for width in ss_col_widths])),'y':0}
-        for colIdx, layer in enumerate(self.lgrid.grid[0]):
-            # layer.setDimensions(self.lgrid.grid[0], [self.lgrid.grid[0][0]])
-            xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
-            layer.xy        = dict(xy)
-
-            # Update x position
-            # xy['x'] += layer.width + GraphParam.spacing
-            xy['x'] += ss_col_widths[colIdx] + GraphParam.spacing
+        #     # Update x position
+        #     # xy['x'] += layer.width + GraphParam.spacing
+        #     xy['x'] += ss_col_widths[colIdx] + GraphParam.spacing
 
         # set titles locations and plot
         maxheight = .5 * (1 + np.sum(ss_row_heights))
@@ -98,10 +106,13 @@ if __name__ == "__main__":
     l4 = plonny.Conv2D(l3, (32, 32, 1), (3,3))
     l5 = plonny.Conv2D(l4, (32, 32, 1), (3,3))
 
+    l22 = plonny.Conv2D(l1, (32, 32, 1), (3,3))
+
     lg = LayerGrid()
     lg.set(0, 0, l0)
     lg.set(0, 1, l1)
-    # lg.set(1, 2, l1)
+    lg.set(0, 2, l2)
+    lg.set(1, 2, l22)
     # lg.set(0, 2, l2)
     # lg.set(0, 3, l3)
     # lg.set(0, 4, l4)
