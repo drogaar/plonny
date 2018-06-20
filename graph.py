@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
 from layergrid import LayerGrid
+from plonny import GraphParam
 sns.set()
 
 def defineFigure():
@@ -42,28 +43,37 @@ class Graph(object):
             for layer in row:
                 layer.setDimensions(colWidths, rowHeights)
 
-        #
-        # max_height = scale2Screen(self.shape[1], heights, 0, .25) #use labelheight spacing
-        # print("max_height: ", max_height)
-        # max_full_width = self.shape[0] / self.shape[1] * max_height
-        # max_full_width = np.sum(widths) / self.shape[0] * max_full_width + GraphParam.spacing * (len(widths) - 1)
+        # Create screen space version of rectilinear grid
+        ss_col_widths = [0] * len(colWidths)
+        ss_row_heights = [0] * len(rowHeights)
+        for rowIdx in range(len(rowHeights)):
+            for colIdx in range(len(colWidths)):
+                max_height = plonny.scale2Screen(rowHeights[rowIdx], rowHeights, 0, .25) #use labelheight spacing
+                max_full_width = colWidths[colIdx] / rowHeights[rowIdx] * max_height
+                max_full_width = np.sum(colWidths) / colWidths[colIdx] * max_full_width + GraphParam.spacing * (len(colWidths) - 1)
+
+                ss_col_widths[colIdx] = plonny.scale2Screen(colWidths[colIdx], colWidths, GraphParam.spacing, min(1, max_full_width))
+                ss_row_heights[rowIdx] = rowHeights[rowIdx] / colWidths[colIdx] * ss_col_widths[colIdx]
+        print("ss_col_widths", ss_col_widths)
+        print("ss_row_heights", ss_row_heights)
 
         # set layer plotting properties
-        xy = {'x':0,'y':0}
+        # xy = {'x':.5 * (1 - np.sum([layer.width for layer in self.lgrid.grid[0]])),'y':0}
+        xy = {'x':.5 * (1 - np.sum([layer.width for layer in self.lgrid.grid[0]])),'y':0}
         for colIdx, layer in enumerate(self.lgrid.grid[0]):
             # layer.setDimensions(self.lgrid.grid[0], [self.lgrid.grid[0][0]])
-            xy['y'] = .5 - .5 * layer.height + plonny.GraphParam.txt_margin
+            xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
             layer.xy        = dict(xy)
 
             # Update x position
-            colW = plonny.scale2Screen(colWidths[colIdx], colWidths, plonny.GraphParam.spacing)
-            xy['x'] += colW + plonny.GraphParam.spacing
+            # xy['x'] += layer.width + GraphParam.spacing
+            xy['x'] += ss_col_widths[colIdx] + GraphParam.spacing
 
         # set titles locations and plot
         maxheight = np.max([layer.height for layer in self.lgrid.grid[0]])
-        plonny.GraphParam.txt_height = 0.5 - .5 * maxheight - 2*plonny.GraphParam.txt_margin
-        plonny.GraphParam.titleheight = 0.5 + .5 * maxheight + 4*plonny.GraphParam.txt_margin
-        plt.text(0.5, plonny.GraphParam.titleheight, title, horizontalalignment='center')
+        GraphParam.txt_height = 0.5 - .5 * maxheight - 2*GraphParam.txt_margin
+        GraphParam.titleheight = 0.5 + .5 * maxheight + 4*GraphParam.txt_margin
+        plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
 
         # Iterate layers, plotting their output shapes
         self.lgrid.grid[0][0].show(ax)
@@ -83,6 +93,7 @@ if __name__ == "__main__":
     lg = LayerGrid()
     lg.set(0, 0, l0)
     lg.set(0, 1, l1)
+    # lg.set(1, 2, l1)
     # lg.set(0, 2, l2)
     # lg.set(0, 3, l3)
     # lg.set(0, 4, l4)

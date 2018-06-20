@@ -46,7 +46,7 @@ class LayerGrid(object):
         return [layer for layer in column if layer is not None]
 
     def rows(self):
-        return self.grid
+        return [self.get_row(rowIdx) for rowIdx in range(len(self.grid))]
     def cols(self):
         return [self.get_col(colIdx) for colIdx in range(len(self.grid[0]))]
 
