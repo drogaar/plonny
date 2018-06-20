@@ -23,7 +23,7 @@ def annotate_tensor(self, showdims=(True, True, True)):
 
 def add_layer_name(self):
     """Adds the layers name to plot."""
-    plt.text(self.xy['x'], GraphParam.txt_height, type(self).__name__, rotation=90)
+    plt.text(self.xy['x'], self.xy['y'] - GraphParam.txt_margin, type(self).__name__, rotation=90)
 
 def draw_tensor(self, axes):
     """Draw a three dimenionsal cube depending on given layers output shape"""
@@ -67,7 +67,7 @@ def setDimsBy(self, widths, heights):
 
     # self.maxShape_h  = calcMaxShape(horizontal)
     # self.maxShape_v  = calcMaxShape(vertical)
-    max_height = scale2Screen(self.shape[1], heights, 0, .25) #use labelheight spacing
+    max_height = scale2Screen(self.shape[1], heights, GraphParam.label_reserve, 1 - GraphParam.title_reserve) #use labelheight spacing
     print("max_height: ", max_height)
     max_full_width = self.shape[0] / self.shape[1] * max_height
     max_full_width = np.sum(widths) / self.shape[0] * max_full_width + GraphParam.spacing * (len(widths) - 1)
@@ -90,6 +90,8 @@ class GraphParam:
     spacing         =   0.025           #horizontal space between shapes
     depth_spacing   =   .7 * spacing    #3D tensor depth
     max_row_height  =   .5              #maximum height in a structured graph
+    label_reserve   =   5*txt_margin
+    title_reserve   =   0.2
 
 
 

@@ -43,12 +43,14 @@ class Graph(object):
             for layer in row:
                 layer.setDimensions(colWidths, rowHeights)
 
+        GraphParam.label_reserve = 5*GraphParam.txt_margin
+
         # Create screen space version of rectilinear grid
         ss_col_widths = [0] * len(colWidths)
         ss_row_heights = [0] * len(rowHeights)
         for rowIdx in range(len(rowHeights)):
             for colIdx in range(len(colWidths)):
-                max_height = plonny.scale2Screen(rowHeights[rowIdx], rowHeights, 0, .25) #use labelheight spacing
+                max_height = plonny.scale2Screen(rowHeights[rowIdx], rowHeights, GraphParam.label_reserve, 1 - GraphParam.title_reserve) #use labelheight spacing
                 max_full_width = colWidths[colIdx] / rowHeights[rowIdx] * max_height
                 max_full_width = np.sum(colWidths) / colWidths[colIdx] * max_full_width + GraphParam.spacing * (len(colWidths) - 1)
 
@@ -58,8 +60,8 @@ class Graph(object):
         print("ss_row_heights", ss_row_heights)
 
         # set layer plotting properties
-        xy_start = {  'x':.5 * (1 - np.sum(ss_col_widths) - GraphParam.spacing * (len(ss_col_widths)-1)),
-                'y':.5 * (1 - np.sum(ss_row_heights) - 0)} #use text spacing
+        xy_start = {    'x':.5 * (1 - np.sum(ss_col_widths) - GraphParam.spacing * (len(ss_col_widths)-1)),
+                         'y':.9 - 0.5 * ss_row_heights[0]} #use text spacing
         xy = dict(xy_start)
         for rowIdx, row in enumerate(self.lgrid.rows()):
             xy['x'] = xy_start['x']
@@ -73,7 +75,7 @@ class Graph(object):
                     print("layer.xy", layer.xy)
 
                 xy['x'] += ss_col_widths[colIdx] + GraphParam.spacing
-            xy['y'] -= ss_row_heights[rowIdx] + GraphParam.txt_margin #Use text spacing
+            xy['y'] -= ss_row_heights[rowIdx] + GraphParam.label_reserve #Use text spacing
 
         # xy = {'x':.5 * (1 - np.sum([width for width in ss_col_widths])),'y':0}
         # for colIdx, layer in enumerate(self.lgrid.grid[0]):
@@ -101,7 +103,7 @@ class Graph(object):
 if __name__ == "__main__":
     l0 = plonny.Input((32, 32, 1))
     l02 = plonny.Input((32, 32, 1))
-    l1 = plonny.Conv2D([l0, l02], (32, 32, 1), (3,3))
+    l1 = plonny.Conv2D([l0, l02], (16, 16, 1), (3,3))
     l2 = plonny.Conv2D([l1], (32, 32, 1), (3,3))
     l3 = plonny.Conv2D([l2], (32, 32, 1), (3,3))
     l4 = plonny.Conv2D([l3], (32, 32, 1), (3,3))
