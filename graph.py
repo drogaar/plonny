@@ -10,7 +10,7 @@ def defineFigure():
     """Setup plot"""
     fig = plt.figure(figsize=(10,10))
     axes = fig.add_subplot(111)
-    # plt.axis('off')
+    plt.axis('off')
     plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
     plt.ylim(0, 1)
     plt.xlim(0, 1)
@@ -28,73 +28,48 @@ class Graph(object):
 
     def graphshow(self, title="Neural Network"):
         ax = defineFigure()
+        grid = self.lgrid
 
         # calculate dimensions for the rectilinear grid
-        colWidths = [0] * len(self.lgrid.cols())
-        rowHeights = [0] * len(self.lgrid.rows())
-
-        for colIdx, column in enumerate(self.lgrid.cols()):
-            colWidths[colIdx] = max([layer.shape[0] for layer in column])
-        for rowIdx, row in enumerate(self.lgrid.rows()):
-            rowHeights[rowIdx] = max([layer.shape[1] for layer in row])
+        col_widths   = [max([layer.shape[0] for layer in col]) for col in grid.cols()]
+        row_heights  = [max([layer.shape[1] for layer in row]) for row in grid.rows()]
 
         # calculate layer screen dimensions based on grid
-        for row in self.lgrid.rows():
+        for row in grid.rows():
             for layer in row:
-                layer.setDimensions(colWidths, rowHeights)
+                layer.setDimensions(col_widths, row_heights)
 
-        GraphParam.label_reserve = 5*GraphParam.txt_margin
+        # Screen space version of rectilinear grid
+        col_widths = [max([layer.width for layer in col]) for col in grid.cols()]
+        row_heights =[max([layer.height for layer in row]) for row in grid.rows()]
 
-        # Create screen space version of rectilinear grid
-        ss_col_widths = [0] * len(colWidths)
-        ss_row_heights = [0] * len(rowHeights)
-        for rowIdx in range(len(rowHeights)):
-            for colIdx in range(len(colWidths)):
-                max_height = plonny.scale2Screen(rowHeights[rowIdx], rowHeights, GraphParam.label_reserve, 1 - GraphParam.title_reserve) #use labelheight spacing
-                max_full_width = colWidths[colIdx] / rowHeights[rowIdx] * max_height
-                max_full_width = np.sum(colWidths) / colWidths[colIdx] * max_full_width + GraphParam.spacing * (len(colWidths) - 1)
+        # starting point for drawing
+        xy = {  'x':.5 * (1 - np.sum(col_widths) - GraphParam.spacing * (len(col_widths)-1)),
+                'y':.9 - 0.5 * row_heights[0]} #use text spacing
 
-                ss_col_widths[colIdx] = plonny.scale2Screen(colWidths[colIdx], colWidths, GraphParam.spacing, min(1, max_full_width))
-                ss_row_heights[rowIdx] = rowHeights[rowIdx] / colWidths[colIdx] * ss_col_widths[colIdx]
-        print("ss_col_widths", ss_col_widths)
-        print("ss_row_heights", ss_row_heights)
+        # iterate gridpositions
+        for rowIdx, _ in enumerate(grid.rows()):
+            for colIdx, _ in enumerate(grid.cols()):
+                # Skip empty gridcells
+                layer = grid.get(rowIdx, colIdx)
+                if(layer is None):
+                    continue
 
-        # set layer plotting properties
-        xy_start = {    'x':.5 * (1 - np.sum(ss_col_widths) - GraphParam.spacing * (len(ss_col_widths)-1)),
-                         'y':.9 - 0.5 * ss_row_heights[0]} #use text spacing
-        xy = dict(xy_start)
-        for rowIdx, row in enumerate(self.lgrid.rows()):
-            xy['x'] = xy_start['x']
-
-            for colIdx, col in enumerate(self.lgrid.cols()):
-                # xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
-                layer = self.lgrid.get(rowIdx, colIdx)
-                if(layer is not None):
-                    layer.xy        = dict(xy)
-                    layer.xy['y']   -= .5 * layer.height + GraphParam.txt_margin
-                    print("layer.xy", layer.xy)
-
-                xy['x'] += ss_col_widths[colIdx] + GraphParam.spacing
-            xy['y'] -= ss_row_heights[rowIdx] + GraphParam.label_reserve #Use text spacing
-
-        # xy = {'x':.5 * (1 - np.sum([width for width in ss_col_widths])),'y':0}
-        # for colIdx, layer in enumerate(self.lgrid.grid[0]):
-        #     # layer.setDimensions(self.lgrid.grid[0], [self.lgrid.grid[0][0]])
-        #     xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
-        #     layer.xy        = dict(xy)
-        #
-        #     # Update x position
-        #     # xy['x'] += layer.width + GraphParam.spacing
-        #     xy['x'] += ss_col_widths[colIdx] + GraphParam.spacing
+                # Set layer locations
+                layer.xy        = dict(xy)
+                layer.xy['x']   += np.sum(col_widths[:colIdx]) + GraphParam.spacing * colIdx
+                layer.xy['y']   -= np.sum(row_heights[:rowIdx]) + GraphParam.label_reserve * rowIdx
+                layer.xy['y']   -= .5 * layer.height + GraphParam.txt_margin
+                #Use text spacing
 
         # set titles locations and plot
-        maxheight = .5 * (1 + np.sum(ss_row_heights))
+        maxheight = .5 * (1 + np.sum(row_heights))
         GraphParam.titleheight = maxheight + 4*GraphParam.txt_margin
         plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
         GraphParam.txt_height = maxheight - 2*GraphParam.txt_margin
 
         # Iterate layers, plotting their output shapes
-        for row in self.lgrid.rows():
+        for row in grid.rows():
             for layer in row:
                 layer.show(ax, layer.inbound)
 

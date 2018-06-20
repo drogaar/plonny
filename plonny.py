@@ -39,6 +39,7 @@ def draw_tensor(self, axes):
                                     self.width,
                                     self.height,
                                     color=color,
+                                    zorder=-1,
                                     linewidth=1)#, edgecolor='r', facecolor='none'
         axes.add_patch(rect)
 
@@ -96,12 +97,12 @@ class GraphParam:
 
 
 class Layer(object):
-    def __init__(self, shape, layer=None):
+    def __init__(self, shape, layers=None):
         self.shape = shape
         self.inbound = []
 
-        if layer is not None:
-            self.inbound = layer
+        if layers is not None:
+            self.inbound = layers
 
     show = show_basiclayer
     setDimensions = setDimsBy
@@ -111,25 +112,25 @@ class Input(Layer):
         Layer.__init__(self, shape)
 
 class Pool(Layer):
-    def __init__(self, shape, layer=None):
-        Layer.__init__(self, shape, layer)
+    def __init__(self, shape, layers=None):
+        Layer.__init__(self, shape, layers)
 
 class Reshape(Layer):
-    def __init__(self, shape, layer=None):
-        Layer.__init__(self, shape, layer)
+    def __init__(self, shape, layers=None):
+        Layer.__init__(self, shape, layers)
 
 class CTC(Layer):
     """Connectionist Temporal Classification"""
-    def __init__(self, shape, layer=None):
-        Layer.__init__(self, shape, layer)
+    def __init__(self, shape, layers=None):
+        Layer.__init__(self, shape, layers)
 
 class Upsample(Layer):
-    def __init__(self, shape, layer=None):
-        Layer.__init__(self, shape, layer)
+    def __init__(self, shape, layers=None):
+        Layer.__init__(self, shape, layers)
 
 class Dropout(Layer):
-    def __init__(self, shape, layer=None):
-        Layer.__init__(self, shape, layer)
+    def __init__(self, shape, layers=None):
+        Layer.__init__(self, shape, layers)
 
 
 
@@ -142,7 +143,7 @@ class Concat(Layer):
         for input_layer in extra_input_layers:
             shape[2] += list(input_layer.shape)[2] if len(input_layer.shape) > 2 else 0
 
-        Layer.__init__(self, layer, shape)
+        Layer.__init__(self, shape, [layer])
         self.input_layers = extra_input_layers
 
         Concat.nConcatsUsed += 1
