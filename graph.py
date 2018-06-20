@@ -58,8 +58,16 @@ class Graph(object):
         print("ss_row_heights", ss_row_heights)
 
         # set layer plotting properties
-        # xy = {'x':.5 * (1 - np.sum([layer.width for layer in self.lgrid.grid[0]])),'y':0}
-        xy = {'x':.5 * (1 - np.sum([layer.width for layer in self.lgrid.grid[0]])),'y':0}
+        # xy = {'x':.5 * (1 - np.sum(ss_col_widths)), 'y':.5 * (1 - np.sum(ss_row_heights))}
+        # for rowIdx in range(len(self.lgrid.rows())):
+        #     for colIdx in range(len(self.lgrid.cols())):
+        #         xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
+        #         layer.xy        = dict(xy)
+        #         layer.xy['y']   -= layer.height + GraphParam.txt_margin
+        #
+        #         xy['x'] += ss_col_widths[colIdx] + GraphParam.spacing
+
+        xy = {'x':.5 * (1 - np.sum([width for width in ss_col_widths])),'y':0}
         for colIdx, layer in enumerate(self.lgrid.grid[0]):
             # layer.setDimensions(self.lgrid.grid[0], [self.lgrid.grid[0][0]])
             xy['y'] = .5 - .5 * layer.height + GraphParam.txt_margin
@@ -70,15 +78,18 @@ class Graph(object):
             xy['x'] += ss_col_widths[colIdx] + GraphParam.spacing
 
         # set titles locations and plot
-        maxheight = np.max([layer.height for layer in self.lgrid.grid[0]])
-        GraphParam.txt_height = 0.5 - .5 * maxheight - 2*GraphParam.txt_margin
-        GraphParam.titleheight = 0.5 + .5 * maxheight + 4*GraphParam.txt_margin
+        maxheight = .5 * (1 + np.sum(ss_row_heights))
+        GraphParam.titleheight = maxheight + 4*GraphParam.txt_margin
         plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
+        GraphParam.txt_height = maxheight - 2*GraphParam.txt_margin
 
         # Iterate layers, plotting their output shapes
+        # self.lgrid.grid[0][0].show(ax)
+        # for current, layer in enumerate(self.lgrid.grid[0][1:], 1):
+        #     layer.show(ax, [self.lgrid.grid[0][current-1]])
         self.lgrid.grid[0][0].show(ax)
         for current, layer in enumerate(self.lgrid.grid[0][1:], 1):
-            layer.show(ax, [self.lgrid.grid[0][current-1]])
+            layer.show(ax, layer.inbound)
 
         plt.show()
 
