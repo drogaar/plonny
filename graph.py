@@ -100,16 +100,18 @@ class Graph(object):
 
 if __name__ == "__main__":
     l0 = plonny.Input((32, 32, 1))
-    l1 = plonny.Conv2D(l0, (32, 32, 1), (3,3))
-    l2 = plonny.Conv2D(l1, (32, 32, 1), (3,3))
-    l3 = plonny.Conv2D(l2, (32, 32, 1), (3,3))
-    l4 = plonny.Conv2D(l3, (32, 32, 1), (3,3))
-    l5 = plonny.Conv2D(l4, (32, 32, 1), (3,3))
+    l02 = plonny.Input((32, 32, 1))
+    l1 = plonny.Conv2D([l0, l02], (32, 32, 1), (3,3))
+    l2 = plonny.Conv2D([l1], (32, 32, 1), (3,3))
+    l3 = plonny.Conv2D([l2], (32, 32, 1), (3,3))
+    l4 = plonny.Conv2D([l3], (32, 32, 1), (3,3))
+    l5 = plonny.Conv2D([l4], (32, 32, 1), (3,3))
 
-    l22 = plonny.Conv2D(l1, (32, 32, 1), (3,3))
+    l22 = plonny.Conv2D([l1], (32, 32, 1), (3,3))
 
     lg = LayerGrid()
     lg.set(0, 0, l0)
+    lg.set(1, 0, l02)
     lg.set(0, 1, l1)
     lg.set(0, 2, l2)
     lg.set(1, 2, l22)

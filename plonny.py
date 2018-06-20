@@ -99,7 +99,7 @@ class Layer(object):
         self.inbound = []
 
         if layer is not None:
-            self.inbound = [layer]
+            self.inbound = layer
 
     show = show_basiclayer
     setDimensions = setDimsBy
@@ -220,23 +220,24 @@ class Conv2D(Layer):
         add_layer_name(self)
 
         # draw kernel
-        input = inputs[0]
-        self.kernel_rel = (self.kernel[0] * input.width / input.shape[0], self.kernel[1] * input.height / input.shape[1])
-        kernel_pos = (input.xy['x'] + input.width - self.kernel_rel[0], input.xy['y'] + input.height - self.kernel_rel[1])
-        rect = patches.Rectangle(   kernel_pos,
-                                    self.kernel_rel[0],
-                                    self.kernel_rel[1],
-                                    color=GraphParam.lineColor,
-                                    alpha=.6,
-                                    linewidth=1)#, edgecolor='r', facecolor='none'
-        axes.add_patch(rect)
+        for input in inputs:
+            # input = inputs[0]
+            self.kernel_rel = (self.kernel[0] * input.width / input.shape[0], self.kernel[1] * input.height / input.shape[1])
+            kernel_pos = (input.xy['x'] + input.width - self.kernel_rel[0], input.xy['y'] + input.height - self.kernel_rel[1])
+            rect = patches.Rectangle(   kernel_pos,
+                                        self.kernel_rel[0],
+                                        self.kernel_rel[1],
+                                        color=GraphParam.lineColor,
+                                        alpha=.6,
+                                        linewidth=1)#, edgecolor='r', facecolor='none'
+            axes.add_patch(rect)
 
-        # draw kernel connections
-        down = list(kernel_pos)
-        down[0] = down[0] + self.kernel_rel[0]
-        up = list(down)
-        up[1] += self.kernel_rel[1]
-        dest = dict(self.xy)
-        dest['y'] += self.height
-        plt.plot([down[0], dest['x']], [down[1], dest['y']], linewidth=.5, alpha=0.9, color=GraphParam.lineColor)
-        plt.plot([up[0], dest['x']], [up[1], dest['y']], linewidth=.5, alpha=0.9, color=GraphParam.lineColor)
+            # draw kernel connections
+            down = list(kernel_pos)
+            down[0] = down[0] + self.kernel_rel[0]
+            up = list(down)
+            up[1] += self.kernel_rel[1]
+            dest = dict(self.xy)
+            dest['y'] += self.height
+            plt.plot([down[0], dest['x']], [down[1], dest['y']], linewidth=.5, alpha=0.9, color=GraphParam.lineColor)
+            plt.plot([up[0], dest['x']], [up[1], dest['y']], linewidth=.5, alpha=0.9, color=GraphParam.lineColor)
