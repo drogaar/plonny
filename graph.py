@@ -84,12 +84,9 @@ class Graph(object):
         GraphParam.txt_height = maxheight - 2*GraphParam.txt_margin
 
         # Iterate layers, plotting their output shapes
-        # self.lgrid.grid[0][0].show(ax)
-        # for current, layer in enumerate(self.lgrid.grid[0][1:], 1):
-        #     layer.show(ax, [self.lgrid.grid[0][current-1]])
-        self.lgrid.grid[0][0].show(ax)
-        for current, layer in enumerate(self.lgrid.grid[0][1:], 1):
-            layer.show(ax, layer.inbound)
+        for row in self.lgrid.rows():
+            for layer in row:
+                layer.show(ax, layer.inbound)
 
         plt.show()
 
