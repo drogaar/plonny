@@ -57,19 +57,24 @@ def calcMaxShape(graph):
                 maxShape[dim] = layer.shape[dim]
     return {'w':maxShape[0], 'h':maxShape[1], 'd':maxShape[2]}
 
-def scale2Screen(property, shapes, spacing):
+def scale2Screen(property, shapes, spacing, screen_width = 1):
     """Convert shape space width or height to screen space dimension"""
     spacings = spacing * (len(shapes) - 1)
     totalDims = np.sum(shapes)
-    return property / totalDims * (1 - spacings)
+    return property / totalDims * (screen_width - spacings)
 
-def setDimsBy(self, horizontal, vertical):
+def setDimsBy(self, widths, heights):
     """Given a row and column of layers, set self's proper width and height."""
 
-    self.maxShape_h  = calcMaxShape(horizontal)
+    # self.maxShape_h  = calcMaxShape(horizontal)
     # self.maxShape_v  = calcMaxShape(vertical)
+    max_height = scale2Screen(self.shape[1], heights, 0, .25) #use labelheight spacing
+    print("max_height: ", max_height)
+    max_full_width = self.shape[0] / self.shape[1] * max_height
+    max_full_width = np.sum(widths) / self.shape[0] * max_full_width + GraphParam.spacing * (len(widths) - 1)
 
-    self.width = scale2Screen(self.shape[0], [layer.shape[0] for layer in horizontal], GraphParam.spacing)
+    # self.width = scale2Screen(self.shape[0], widths, GraphParam.spacing)
+    self.width = scale2Screen(self.shape[0], widths, GraphParam.spacing, max_full_width)
     self.height    = self.shape[1] / self.shape[0] * self.width
     # self.depth     = self.shape[2] / self.maxShape_h['d'] if len(self.shape) > 2 else 0
     self.depth = 0

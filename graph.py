@@ -37,15 +37,25 @@ class Graph(object):
         for rowIdx, row in enumerate(self.lgrid.rows()):
             rowHeights[rowIdx] = max([layer.shape[1] for layer in row])
 
+        # calculate layer screen dimensions based on grid
+        for row in self.lgrid.rows():
+            for layer in row:
+                layer.setDimensions(colWidths, rowHeights)
+
+        #
+        # max_height = scale2Screen(self.shape[1], heights, 0, .25) #use labelheight spacing
+        # print("max_height: ", max_height)
+        # max_full_width = self.shape[0] / self.shape[1] * max_height
+        # max_full_width = np.sum(widths) / self.shape[0] * max_full_width + GraphParam.spacing * (len(widths) - 1)
+
         # set layer plotting properties
         xy = {'x':0,'y':0}
         for colIdx, layer in enumerate(self.lgrid.grid[0]):
-            layer.setDimensions(self.lgrid.grid[0], [self.lgrid.grid[0][0]])
+            # layer.setDimensions(self.lgrid.grid[0], [self.lgrid.grid[0][0]])
             xy['y'] = .5 - .5 * layer.height + plonny.GraphParam.txt_margin
             layer.xy        = dict(xy)
 
             # Update x position
-            # xy['x'] += layer.width + plonny.GraphParam.spacing
             colW = plonny.scale2Screen(colWidths[colIdx], colWidths, plonny.GraphParam.spacing)
             xy['x'] += colW + plonny.GraphParam.spacing
 
