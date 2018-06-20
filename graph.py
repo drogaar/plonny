@@ -2,6 +2,7 @@ import plonny
 import matplotlib.pyplot as plt
 import seaborn as sns
 import numpy as np
+from layergrid import LayerGrid
 sns.set()
 
 def defineFigure():
@@ -14,43 +15,6 @@ def defineFigure():
     plt.xlim(0, 1)
     return axes
 
-class LayerGrid(object):
-    """Define a grid on which to place layers for a structured view."""
-
-    def __init__(self):
-        self.grid = [[None]]
-
-    def __str__(self):
-        rows = ["{}\n".format(row) for row in self.grid]
-        return "".join(rows)
-
-    def set(self, rowIdx, colIdx, layer):
-        # enlarge grid as necessary
-        self.grid += [[None] for _ in range((rowIdx + 1) - len(self.grid))]
-        for row in self.grid:
-            row += [None for _ in range((colIdx + 1) - len(row))]
-
-        self.grid[rowIdx][colIdx] = layer
-
-    def exists(self, row, col):
-        try:
-            return self.grid[row][col] is not None
-        except IndexError:
-            return False
-
-        return False
-
-    def get(self, row, col):
-        if(self.exists(row, col)):
-            return self.grid[row][col]
-        return None
-
-    def find(self, obj):
-        for rowIdx, row in enumerate(self.grid):
-            for colIdx, layer in enumerate(row):
-                if(obj == layer):
-                    return (rowIdx, colIdx)
-
 class Graph(object):
     """Controls a structured grid for a graph."""
 
@@ -62,21 +26,28 @@ class Graph(object):
             self.lgrid = graph
 
     def graphshow(self, title="Neural Network"):
-        # check graph connectedness..
-
         ax = defineFigure()
+
+        # calculate dimensions for the rectilinear grid
+        colWidths = [0] * len(self.lgrid.cols())
+        rowHeights = [0] * len(self.lgrid.rows())
+
+        for colIdx, column in enumerate(self.lgrid.cols()):
+            colWidths[colIdx] = max([layer.shape[0] for layer in column])
+        for rowIdx, row in enumerate(self.lgrid.rows()):
+            rowHeights[rowIdx] = max([layer.shape[1] for layer in row])
 
         # set layer plotting properties
         xy = {'x':0,'y':0}
-        for layer in self.lgrid.grid[0]:
+        for colIdx, layer in enumerate(self.lgrid.grid[0]):
             layer.setDimensions(self.lgrid.grid[0], [self.lgrid.grid[0][0]])
             xy['y'] = .5 - .5 * layer.height + plonny.GraphParam.txt_margin
             layer.xy        = dict(xy)
 
             # Update x position
-            # print(layer.width)
-            # print("x: ", xy['x'])
-            xy['x'] += layer.width + plonny.GraphParam.spacing
+            # xy['x'] += layer.width + plonny.GraphParam.spacing
+            colW = plonny.scale2Screen(colWidths[colIdx], colWidths, plonny.GraphParam.spacing)
+            xy['x'] += colW + plonny.GraphParam.spacing
 
         # set titles locations and plot
         maxheight = np.max([layer.height for layer in self.lgrid.grid[0]])
@@ -102,15 +73,10 @@ if __name__ == "__main__":
     lg = LayerGrid()
     lg.set(0, 0, l0)
     lg.set(0, 1, l1)
-    lg.set(0, 2, l2)
-    lg.set(0, 3, l3)
-    lg.set(0, 4, l4)
-    lg.set(0, 5, l5)
+    # lg.set(0, 2, l2)
+    # lg.set(0, 3, l3)
+    # lg.set(0, 4, l4)
+    # lg.set(0, 5, l5)
     print(lg.grid)
 
     Graph(lg).graphshow()
-
-    # graph.Add(plonny.Input((32, 32, 1)))
-    # graph.Add(plonny.Conv2D(l0, (32, 32, 40), (3,3))
-    # graph.Add(plonny.Conv2D(l1, (32, 32, 40), (3,3))
-    # graph.Add(plonny.Pool(l2, (16, 16, 40))

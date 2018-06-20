@@ -57,26 +57,22 @@ def calcMaxShape(graph):
                 maxShape[dim] = layer.shape[dim]
     return {'w':maxShape[0], 'h':maxShape[1], 'd':maxShape[2]}
 
+def scale2Screen(property, shapes, spacing):
+    """Convert shape space width or height to screen space dimension"""
+    spacings = spacing * (len(shapes) - 1)
+    totalDims = np.sum(shapes)
+    return property / totalDims * (1 - spacings)
+
 def setDimsBy(self, horizontal, vertical):
     """Given a row and column of layers, set self's proper width and height."""
-
-    def scaleDim(dim, direction, spacing=False):
-        """Convert shape space width or height to screen space dimension"""
-        spacing = GraphParam.spacing if not spacing else spacing
-        spacings = spacing * (len(direction) - 1)
-        totalDims = np.sum([layer.shape[dim] for layer in direction])
-        print("res: ")
-        print(spacing)
-        print(spacings)
-        print([layer.shape[dim] for layer in direction])
-        return self.shape[dim] / totalDims * (1 - spacings)
 
     self.maxShape_h  = calcMaxShape(horizontal)
     # self.maxShape_v  = calcMaxShape(vertical)
 
-    self.width     = scaleDim(0, horizontal)
+    self.width = scale2Screen(self.shape[0], [layer.shape[0] for layer in horizontal], GraphParam.spacing)
     self.height    = self.shape[1] / self.shape[0] * self.width
-    self.depth     = self.shape[2] / self.maxShape_h['d'] if len(self.shape) > 2 else 0
+    # self.depth     = self.shape[2] / self.maxShape_h['d'] if len(self.shape) > 2 else 0
+    self.depth = 0
     # TODO: global max depth to be set.
     # TODO: dynamic layer height
 
@@ -89,6 +85,7 @@ class GraphParam:
     txt_margin      =   0.025           #offsets for shape annotators
     spacing         =   0.025           #horizontal space between shapes
     depth_spacing   =   .7 * spacing    #3D tensor depth
+    max_row_height  =   .5              #maximum height in a structured graph
 
 
 
