@@ -69,7 +69,6 @@ def setDimsBy(self, widths, heights):
     # self.maxShape_h  = calcMaxShape(horizontal)
     # self.maxShape_v  = calcMaxShape(vertical)
     max_height = scale2Screen(self.shape[1], heights, GraphParam.label_reserve, 1 - GraphParam.title_reserve) #use labelheight spacing
-    print("max_height: ", max_height)
     max_full_width = self.shape[0] / self.shape[1] * max_height
     max_full_width = np.sum(widths) / self.shape[0] * max_full_width + GraphParam.spacing * (len(widths) - 1)
 

@@ -45,7 +45,7 @@ class Graph(object):
 
         # starting point for drawing
         xy = {  'x':.5 * (1 - np.sum(col_widths) - GraphParam.spacing * (len(col_widths)-1)),
-                'y':.9 - 0.5 * row_heights[0]} #use text spacing
+                'y':.5 * (1 + np.sum(row_heights))} #use text spacing
 
         # iterate gridpositions
         for rowIdx, _ in enumerate(grid.rows()):
