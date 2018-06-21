@@ -60,6 +60,7 @@ class Graph(object):
                 layer.xy['x']   += np.sum(col_widths[:colIdx]) + GraphParam.spacing * colIdx
                 layer.xy['y']   -= np.sum(row_heights[:rowIdx]) + GraphParam.label_reserve * rowIdx
                 layer.xy['y']   -= .5 * layer.height + GraphParam.txt_margin
+                layer.txt_height = xy['y'] - np.sum(row_heights[:rowIdx]) - GraphParam.label_reserve * (rowIdx + 1)
                 #Use text spacing
 
         # set titles locations and plot
