@@ -63,7 +63,7 @@ def scale2Screen(property, shapes, spacing, screen_width = 1):
     spacings = spacing * (len(shapes) - 1)
     return property / np.sum(shapes) * (screen_width - spacings)
 
-def setDimsBy(self, widths, heights):
+def setDimsBy(self, widths, heights, maxDepth):
     """Given a row and column of layers, set self's proper width and height."""
 
     # self.maxShape_h  = calcMaxShape(horizontal)
@@ -75,8 +75,8 @@ def setDimsBy(self, widths, heights):
     # self.width = scale2Screen(self.shape[0], widths, GraphParam.spacing)
     self.width = scale2Screen(self.shape[0], widths, GraphParam.spacing, min(1, max_full_width))
     self.height    = self.shape[1] / self.shape[0] * self.width
-    # self.depth     = self.shape[2] / self.maxShape_h['d'] if len(self.shape) > 2 else 0
-    self.depth = 0
+    self.depth     = self.shape[2] / maxDepth if len(self.shape) > 2 else 0
+    # self.depth = 0
     # TODO: global max depth to be set.
     # TODO: dynamic layer height
 

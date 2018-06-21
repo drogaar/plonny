@@ -34,17 +34,19 @@ class Graph(object):
         col_widths   = [max([layer.shape[0] for layer in col]) for col in grid.cols()]
         row_heights  = [max([layer.shape[1] for layer in row]) for row in grid.rows()]
 
+        maxD = max([max([layer.shape[2] for layer in row if len(layer.shape) > 2]) for row in grid.rows()])
+
         # calculate layer screen dimensions based on grid
         for row in grid.rows():
             for layer in row:
-                layer.setDimensions(col_widths, row_heights)
+                layer.setDimensions(col_widths, row_heights, maxD)
 
         # Screen space version of rectilinear grid
         col_widths = [max([layer.width for layer in col]) for col in grid.cols()]
         row_heights =[max([layer.height for layer in row]) for row in grid.rows()]
 
         # starting point for drawing
-        xy = {  'x':.5 * (1 - np.sum(col_widths) - GraphParam.spacing * (len(col_widths)-1)),
+        xy = {  'x':.5 * (1 - np.sum(col_widths) - GraphParam.spacing * (len(col_widths))),
                 'y':.5 * (1 + np.sum(row_heights))} #use text spacing
 
         # iterate gridpositions
