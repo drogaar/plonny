@@ -24,8 +24,8 @@ def annotate_tensor(self, showdims=(True, True, True)):
 
 def add_layer_name(self):
     """Adds the layers name to plot."""
-    x1, y1, x2, y2 = util.add_text(self.xy['x'], self.txt_height, self.name, rotation=90)
-    self.bottom_y = y1
+    txt, x1, y1, x2, y2 = util.add_text(self.xy['x'], self.txt_height, self.name, va='top', ha='left')#, rotation=90
+    return (txt, x1, y1, x2, y2)
 
 def draw_tensor(self, axes):
     """Draw a three dimenionsal cube depending on given layers output shape"""

@@ -41,4 +41,4 @@ def add_text(x, y, s, **kwargs):
     endx = x + offset_horizontal[ha] * width
     endy = y + offset_vertical[va] * height
 
-    return (startx, starty, endx, endy)
+    return (t, startx, starty, endx, endy)

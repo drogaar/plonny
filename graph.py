@@ -4,6 +4,7 @@ import seaborn as sns
 import numpy as np
 from layergrid import LayerGrid
 from plonny import GraphParam
+from plonny import add_layer_name
 sns.set()
 
 def defineFigure():
@@ -44,14 +45,20 @@ class Graph(object):
         # Screen space version of rectilinear grid
         col_widths = [max([layer.width for layer in col]) for col in grid.cols()]
         row_heights =[max([layer.height for layer in row]) for row in grid.rows()]
+        print("row_heights", row_heights)
 
         # starting point for drawing
         xy = {  'x':.5 * (1 - np.sum(col_widths) - GraphParam.spacing * (len(col_widths))),
-                'y':.5 * (1 + np.sum(row_heights) + GraphParam.label_reserve * len(row_heights))} #use text spacing
+                'y':1} #use text spacing# + GraphParam.label_reserve * len(row_heights)#.5 * (1 + np.sum(row_heights))
+        label_y_pool = []
+        label_min = xy['y']
 
-        # iterate gridpositions
+
+
+        # iterate gridpositions, rowwise
         for rowIdx, _ in enumerate(grid.rows()):
             for colIdx, _ in enumerate(grid.cols()):
+                # Left cube is cutoff!
                 # Skip empty gridcells
                 layer = grid.get(rowIdx, colIdx)
                 if(layer is None):
@@ -59,27 +66,38 @@ class Graph(object):
 
                 # Set layer locations
                 layer.xy        = dict(xy)
+                rh = list(row_heights[1:])
                 layer.xy['x']   += np.sum(col_widths[:colIdx]) + GraphParam.spacing * colIdx
-                layer.xy['y']   -= np.sum(row_heights[:rowIdx])# + (GraphParam.label_reserve + GraphParam.spacing) * rowIdx
-                layer.xy['y']   -= .5 * layer.height + GraphParam.txt_margin
-                layer.txt_height = xy['y'] - np.sum(row_heights[:rowIdx])# - .5 * layer.height
-                # layer.txt_height -= GraphParam.label_reserve * (rowIdx+1)
-                print(layer.txt_height)
-                # GraphParam.label_reserve * rowIdx
-                #Use text spacing
+                layer.xy['y']   = label_min-row_heights[rowIdx]
+                layer.xy['y']   += .5 * (row_heights[rowIdx] - layer.height)#subtract from maxheight (center only small volumes)
+
+                layer.txt_height = layer.xy['y']
+
+                # Temporarily draw labels to get their dimensions
+                txt, _, y1, _, _ = add_layer_name(layer)
+                label_y_pool += [y1]
+                txt.remove()
+
+            # rowlayers = [grid.get(rowIdx, colIdx) for colIdx, _ in enumerate(grid.cols())]
+            # label_y_pool = np.min([layer.bottom_y for layer in grid.get_row(rowIdx)])
+            print("label_y_pool", np.min(label_y_pool))
+            label_min = np.min(label_y_pool)
         print("row_heights:", row_heights)
+
+        # Center the figure after having calculated total height
+        miny = label_min
+        maxy = xy['y'] - row_heights[rowIdx]
+        diff = .5 - .5*(maxy - miny)
+        for row in grid.rows():
+            for layer in row:
+                layer.xy['y'] -= diff
+                layer.txt_height -= diff
 
         # set titles locations and plot
         maxheight = .5 * (1 + np.sum(row_heights))
         GraphParam.titleheight = maxheight + 4*GraphParam.txt_margin
         t = plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
 
-        r = f.canvas.get_renderer()
-        bb = t.get_window_extent(renderer=r)
-        width = bb.width
-        height = bb.height
-
-        print("widtheight: ", width, height)
         GraphParam.txt_height = maxheight - 2*GraphParam.txt_margin
 
         # Iterate layers, plotting their output shapes
