@@ -48,10 +48,12 @@ class Graph(object):
         print("row_heights", row_heights)
 
         # starting point for drawing
-        xy = {  'x':.5 * (1 - np.sum(col_widths) - GraphParam.spacing * (len(col_widths))),
+        xy = {  'x':.5 * (1 - np.sum(col_widths) - GraphParam.spacing * (len(col_widths) - 1)),
                 'y':1} #use text spacing# + GraphParam.label_reserve * len(row_heights)#.5 * (1 + np.sum(row_heights))
         label_y_pool = []
         label_min = xy['y']
+
+        print("xy", xy)
 
 
 
