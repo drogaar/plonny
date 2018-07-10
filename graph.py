@@ -5,6 +5,7 @@ import numpy as np
 from layergrid import LayerGrid
 from plonny import GraphParam
 from plonny import add_layer_name
+import copy
 sns.set()
 
 def defineFigure():
@@ -27,9 +28,28 @@ class Graph(object):
         if(isinstance(graph, LayerGrid)):
             self.lgrid = graph
 
+    def copyDuplicates(self):
+        """Copy duplicate layers in a column and return pos in grid."""
+        to_merge = []
+        grid = self.lgrid
+        for rowIdx, _ in enumerate(grid.rows()):
+            for colIdx, _ in enumerate(grid.cols()):
+                layer = grid.get(rowIdx, colIdx)
+                if(layer is None):
+                    continue
+
+                if(layer == grid.get(rowIdx - 1, colIdx)):
+                    grid.set(rowIdx, colIdx, copy.deepcopy(layer))
+                    to_merge.append((rowIdx, colIdx))
+        return to_merge
+
+
     def graphshow(self, title="Neural Network"):
         f, ax = defineFigure()
         grid = self.lgrid
+
+        # Copy duplicates to set individual locations, and merge these later on
+        to_merge = self.copyDuplicates()
 
         # calculate dimensions for the rectilinear grid
         col_widths   = [max([layer.shape[0] for layer in col]) for col in grid.cols()]
@@ -45,17 +65,12 @@ class Graph(object):
         # Screen space version of rectilinear grid
         col_widths = [max([layer.width for layer in col]) for col in grid.cols()]
         row_heights =[max([layer.height for layer in row]) for row in grid.rows()]
-        print("row_heights", row_heights)
 
         # starting point for drawing
-        xy = {  'x':.5 * (1 - np.sum(col_widths) - GraphParam.spacing * (len(col_widths) - 1)),
+        xy = {  'x':.5 * (1 - np.sum(col_widths) - GraphParam.spacing * len(col_widths)),
                 'y':1} #use text spacing# + GraphParam.label_reserve * len(row_heights)#.5 * (1 + np.sum(row_heights))
         label_y_pool = []
         label_min = xy['y']
-
-        print("xy", xy)
-
-
 
         # iterate gridpositions, rowwise
         for rowIdx, _ in enumerate(grid.rows()):
@@ -70,21 +85,26 @@ class Graph(object):
                 layer.xy        = dict(xy)
                 rh = list(row_heights[1:])
                 layer.xy['x']   += np.sum(col_widths[:colIdx]) + GraphParam.spacing * colIdx
-                layer.xy['y']   = label_min-row_heights[rowIdx]
-                layer.xy['y']   += .5 * (row_heights[rowIdx] - layer.height)#subtract from maxheight (center only small volumes)
+                layer.xy['y']    = label_min - row_heights[rowIdx]
+                layer.txt_height = label_min - row_heights[rowIdx]
+                layer.xy['y']   += .5 * (row_heights[rowIdx] - layer.height) #center tensors
 
-                layer.txt_height = layer.xy['y']
 
                 # Temporarily draw labels to get their dimensions
                 txt, _, y1, _, _ = add_layer_name(layer)
                 label_y_pool += [y1]
                 txt.remove()
 
-            # rowlayers = [grid.get(rowIdx, colIdx) for colIdx, _ in enumerate(grid.cols())]
-            # label_y_pool = np.min([layer.bottom_y for layer in grid.get_row(rowIdx)])
-            print("label_y_pool", np.min(label_y_pool))
             label_min = np.min(label_y_pool)
-        print("row_heights:", row_heights)
+
+        # merge duplicate layers
+        for rowIdx, colIdx in to_merge:
+            l1 = grid.get(rowIdx - 1, colIdx)
+            l2 = grid.get(rowIdx, colIdx)
+
+            l1.xy['y']      = (l1.xy['y'] + l2.xy['y']) / 2.
+            l1.txt_height   = (l1.txt_height + l2.txt_height) / 2.
+            grid.set(rowIdx, colIdx, None)
 
         # Center the figure after having calculated total height
         miny = label_min
@@ -97,8 +117,8 @@ class Graph(object):
 
         # set titles locations and plot
         maxheight = .5 * (1 + np.sum(row_heights))
-        GraphParam.titleheight = maxheight + 4*GraphParam.txt_margin
-        t = plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
+        GraphParam.titleheight = xy['y'] + 3*GraphParam.spacing - diff#maxheight + 4*GraphParam.txt_margin
+        t = plt.text(0.5, GraphParam.titleheight, title, ha='center', va="bottom", size=16)
 
         GraphParam.txt_height = maxheight - 2*GraphParam.txt_margin
 

@@ -7,7 +7,8 @@ class LayerGrid(object):
         self.grid = [[None]]
 
     def __str__(self):
-        rows = ["{}\n".format(row) for row in self.grid]
+        format = lambda x: x.name if x is not None else "None"
+        rows = ["{}\n".format([format(layer) for layer in row]) for row in self.grid]
         return "".join(rows)
 
     def set(self, rowIdx, colIdx, layer):

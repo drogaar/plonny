@@ -17,18 +17,23 @@ if __name__ == '__main__':
 
 
     lg = layergrid.LayerGrid()
+    lg.set(0, 0, l0)
     lg.set(1, 0, l0)
 
     lg.set(0, 1, l1)
     lg.set(0, 2, l2)
     lg.set(0, 3, l3)
     lg.set(0, 4, l4)
+
+    lg.set(0, 5, l5)
     lg.set(1, 5, l5)
 
-    lg.set(2, 2, la1)
-    lg.set(2, 3, la2)
+    lg.set(1, 2, la1)
+    lg.set(1, 3, la2)
 
     lg.set(0, 6, l6)
-    print(lg.grid)
+    lg.set(1, 6, l6)
+    # print(lg.get_row(0))
+    print(lg)
 
-    graph.Graph(lg).graphshow("")
+    graph.Graph(lg).graphshow()

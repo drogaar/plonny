@@ -62,7 +62,7 @@ def calcMaxShape(graph):
 
 def scale2Screen(property, shapes, spacing, screen_width = 1):
     """Convert shape space width or height to screen space dimension"""
-    spacings = spacing * (len(shapes) - 1)
+    spacings = spacing * len(shapes)
     return property / np.sum(shapes) * (screen_width - spacings)
 
 def setDimsBy(self, widths, heights, maxDepth):
@@ -70,9 +70,9 @@ def setDimsBy(self, widths, heights, maxDepth):
 
     # self.maxShape_h  = calcMaxShape(horizontal)
     # self.maxShape_v  = calcMaxShape(vertical)
-    max_height = scale2Screen(self.shape[1], heights, GraphParam.label_reserve, 1 - GraphParam.title_reserve) #use labelheight spacing
+    max_height = scale2Screen(self.shape[1], heights, GraphParam.label_reserve, 1) #use labelheight spacing
     max_full_width = self.shape[0] / self.shape[1] * max_height
-    max_full_width = np.sum(widths) / self.shape[0] * max_full_width + GraphParam.spacing * (len(widths) - 1)
+    max_full_width = np.sum(widths) / self.shape[0] * max_full_width + GraphParam.spacing * len(widths)
 
     # self.width = scale2Screen(self.shape[0], widths, GraphParam.spacing)
     self.width = scale2Screen(self.shape[0], widths, GraphParam.spacing, min(1, max_full_width))
@@ -225,6 +225,28 @@ class Conv2D(Layer):
         Layer.__init__(self, shape, layer)
         self.kernel = kernel
 
+    def place_kernel(self, input):
+        """Returns the position of a kernel in an input"""
+        self.kernel_rel = (self.kernel[0] * input.width / input.shape[0], self.kernel[1] * input.height / input.shape[1])
+        kernel_pos = (input.xy['x'] + input.width - self.kernel_rel[0], input.xy['y'] + input.height - self.kernel_rel[1])
+
+        if self.xy['y'] < input.xy['y']:
+            kernel_pos = (input.xy['x'] + input.width - self.kernel_rel[0], input.xy['y'])
+        return kernel_pos
+
+    def place_connections(self, kernel_pos, kernel_size, input):
+        """Returns the connection attachment locations to a kernel."""
+        a = list(kernel_pos)
+        b = list(kernel_pos)
+        b[1] += self.kernel_rel[1]
+
+        if self.xy['y'] < input.xy['y']:
+            b[0] += self.kernel_rel[0]
+            return (a, b)
+
+        a[0] += self.kernel_rel[0]
+        return (a, b)
+
     def show(self, axes, inputs=[]):
         """Default plot for Input and Layer"""
         draw_tensor(self, axes)
@@ -235,7 +257,7 @@ class Conv2D(Layer):
         for input in inputs:
             # input = inputs[0]
             self.kernel_rel = (self.kernel[0] * input.width / input.shape[0], self.kernel[1] * input.height / input.shape[1])
-            kernel_pos = (input.xy['x'] + input.width - self.kernel_rel[0], input.xy['y'] + input.height - self.kernel_rel[1])
+            kernel_pos = self.place_kernel(input)
             rect = patches.Rectangle(   kernel_pos,
                                         self.kernel_rel[0],
                                         self.kernel_rel[1],
@@ -244,11 +266,7 @@ class Conv2D(Layer):
                                         linewidth=1)#, edgecolor='r', facecolor='none'
             axes.add_patch(rect)
 
-            # draw kernel connections
-            down = list(kernel_pos)
-            down[0] = down[0] + self.kernel_rel[0]
-            up = list(down)
-            up[1] += self.kernel_rel[1]
+            (down, up) = self.place_connections(kernel_pos, self.kernel_rel, input)
             dest = dict(self.xy)
             dest['y'] += self.height
             plt.plot([down[0], dest['x']], [down[1], dest['y']], linewidth=.5, alpha=0.9, color=GraphParam.lineColor)
