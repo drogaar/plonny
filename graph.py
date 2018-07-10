@@ -10,11 +10,11 @@ def defineFigure():
     """Setup plot"""
     fig = plt.figure(figsize=(10,10))
     axes = fig.add_subplot(111)
-    plt.axis('off')
+    # plt.axis('off')
     plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
     plt.ylim(0, 1)
     plt.xlim(0, 1)
-    return axes
+    return fig, axes
 
 class Graph(object):
     """Controls a structured grid for a graph."""
@@ -27,7 +27,7 @@ class Graph(object):
             self.lgrid = graph
 
     def graphshow(self, title="Neural Network"):
-        ax = defineFigure()
+        f, ax = defineFigure()
         grid = self.lgrid
 
         # calculate dimensions for the rectilinear grid
@@ -47,7 +47,7 @@ class Graph(object):
 
         # starting point for drawing
         xy = {  'x':.5 * (1 - np.sum(col_widths) - GraphParam.spacing * (len(col_widths))),
-                'y':.5 * (1 + np.sum(row_heights))} #use text spacing
+                'y':.5 * (1 + np.sum(row_heights) + GraphParam.label_reserve * len(row_heights))} #use text spacing
 
         # iterate gridpositions
         for rowIdx, _ in enumerate(grid.rows()):
@@ -60,15 +60,26 @@ class Graph(object):
                 # Set layer locations
                 layer.xy        = dict(xy)
                 layer.xy['x']   += np.sum(col_widths[:colIdx]) + GraphParam.spacing * colIdx
-                layer.xy['y']   -= np.sum(row_heights[:rowIdx]) + GraphParam.label_reserve * rowIdx
+                layer.xy['y']   -= np.sum(row_heights[:rowIdx])# + (GraphParam.label_reserve + GraphParam.spacing) * rowIdx
                 layer.xy['y']   -= .5 * layer.height + GraphParam.txt_margin
-                layer.txt_height = xy['y'] - np.sum(row_heights[:rowIdx]) - GraphParam.label_reserve * (rowIdx + 1)
+                layer.txt_height = xy['y'] - np.sum(row_heights[:rowIdx])# - .5 * layer.height
+                # layer.txt_height -= GraphParam.label_reserve * (rowIdx+1)
+                print(layer.txt_height)
+                # GraphParam.label_reserve * rowIdx
                 #Use text spacing
+        print("row_heights:", row_heights)
 
         # set titles locations and plot
         maxheight = .5 * (1 + np.sum(row_heights))
         GraphParam.titleheight = maxheight + 4*GraphParam.txt_margin
-        plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
+        t = plt.text(0.5, GraphParam.titleheight, title, horizontalalignment='center')
+
+        r = f.canvas.get_renderer()
+        bb = t.get_window_extent(renderer=r)
+        width = bb.width
+        height = bb.height
+
+        print("widtheight: ", width, height)
         GraphParam.txt_height = maxheight - 2*GraphParam.txt_margin
 
         # Iterate layers, plotting their output shapes

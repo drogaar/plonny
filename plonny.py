@@ -3,27 +3,29 @@ import matplotlib.patches as patches
 from matplotlib.collections import PatchCollection
 import numpy as np
 import seaborn as sns
+import util
 
 sns.set()
 
 def annotate_tensor(self, showdims=(True, True, True)):
     """Annotates an output shape with its dimensions."""
-    def addtext(text, x_offset=0, y_offset=0, rotation=0):
+    def addtext(text, x_offset=0, y_offset=0, **kwargs):
         fontsize = 8
-        plt.text(   self.xy['x'] + x_offset,
-                    self.xy['y'] + y_offset,
-                    text, rotation=rotation, size=fontsize)
+        util.add_text(  self.xy['x'] + x_offset,
+                        self.xy['y'] + y_offset,
+                        text, size=fontsize, **kwargs)
 
     if showdims[0]:                                 # width
-        addtext(self.shape[0], x_offset = .5*self.width, y_offset = -1 * GraphParam.txt_margin)
+        addtext(self.shape[0], x_offset = .5*self.width)#, y_offset = -1 * GraphParam.txt_margin
     if showdims[1]:                                 # height
         addtext(self.shape[1], y_offset = .5*self.height, rotation=90)
     if showdims[2] and len(self.shape) > 2:         # depth
-        addtext(self.shape[2], y_offset = self.height + GraphParam.txt_margin, rotation=45)
+        addtext(self.shape[2], y_offset = self.height, rotation=45, va='bottom')
 
 def add_layer_name(self):
     """Adds the layers name to plot."""
-    plt.text(self.xy['x'], self.txt_height, type(self).__name__, rotation=90)
+    x1, y1, x2, y2 = util.add_text(self.xy['x'], self.txt_height, self.name, rotation=90)
+    self.bottom_y = y1
 
 def draw_tensor(self, axes):
     """Draw a three dimenionsal cube depending on given layers output shape"""
@@ -96,9 +98,13 @@ class GraphParam:
 
 
 class Layer(object):
-    def __init__(self, shape, layers=None):
+    def __init__(self, shape, layers=None, name=None):
         self.shape = shape
         self.inbound = []
+
+        self.name = type(self).__name__
+        if(name is not None):
+            self.name = name
 
         if layers is not None:
             self.inbound = layers
@@ -131,7 +137,10 @@ class Dropout(Layer):
     def __init__(self, shape, layers=None):
         Layer.__init__(self, shape, layers)
 
-
+class Custom(Layer):
+    def __init__(self, shape, name, layers=None):
+        Layer.__init__(self, shape, layers)
+        self.name = name
 
 class Concat(Layer):
     nConcatsUsed = 0
@@ -155,13 +164,14 @@ class Concat(Layer):
         add_layer_name(self)
 
         # show connections to input tensors
-        yPos = self.xy['y'] - GraphParam.txt_margin - Concat.nConcatsUsed * self.concat_spacing
+        # yPos = self.xy['y'] - GraphParam.txt_margin - Concat.nConcatsUsed * self.concat_spacing
+        yPos = self.xy['y'] + .5 * self.height
         for idx, layer in enumerate(self.input_layers):
             # downwards spacing
-            plt.plot([layer.xy['x'], layer.xy['x']], [layer.xy['y'], yPos], linewidth=1, color=GraphParam.lineColor)
-            plt.plot([self.xy['x'], self.xy['x']], [self.xy['y'], yPos], linewidth=1, color=GraphParam.lineColor)
+            # plt.plot([layer.xy['x'], layer.xy['x']], [layer.xy['y'], yPos], linewidth=1, color=GraphParam.lineColor)
+            # plt.plot([self.xy['x'], self.xy['x']], [self.xy['y'], yPos], linewidth=1, color=GraphParam.lineColor)
             # horizontal connection
-            plt.plot([layer.xy['x'], self.xy['x']], [yPos, yPos], linewidth=1, color=GraphParam.lineColor)
+            plt.plot([layer.xy['x']+layer.width, self.xy['x']], [yPos, yPos], linewidth=1, color=GraphParam.lineColor)
 
 
 
