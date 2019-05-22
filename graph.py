@@ -6,14 +6,15 @@ from layergrid import LayerGrid
 from plonny import GraphParam
 from plonny import add_layer_name
 import copy
+
 sns.set()
 
 def defineFigure():
     """Setup plot"""
     fig = plt.figure(figsize=(10,10))
     axes = fig.add_subplot(111)
-    # plt.axis('off')
-    plt.subplots_adjust(left=0.05, right=0.95, top=0.95, bottom=0.05)
+    plt.axis('off')
+    plt.subplots_adjust(left=0.05, right=0.95, top=1.2, bottom=.3)
     plt.ylim(0, 1)
     plt.xlim(0, 1)
     return fig, axes
@@ -38,7 +39,8 @@ class Graph(object):
                 if(layer is None):
                     continue
 
-                if(layer == grid.get(rowIdx - 1, colIdx)):
+                if(rowIdx > 0 and layer == grid.get(rowIdx - 1, colIdx)):
+                    print(layer.name +  "is equal to " + grid.get(rowIdx - 1, colIdx).name)
                     grid.set(rowIdx, colIdx, copy.deepcopy(layer))
                     to_merge.append((rowIdx, colIdx))
         return to_merge
@@ -53,9 +55,17 @@ class Graph(object):
 
         # calculate dimensions for the rectilinear grid
         col_widths   = [max([layer.shape[0] for layer in col]) for col in grid.cols()]
+        # print("rows:", [max([layer.shape[1] for layer in row]) for row in grid.rows()])
+        for row in grid.rows():
+            for layer in row:
+                print("layer:", layer.name, layer.shape)
         row_heights  = [max([layer.shape[1] for layer in row]) for row in grid.rows()]
 
+        # Solve when no depth in row
+        # depths = [layer.shape[2] for layer in row if len(layer.shape) > 2]
+        # if depths == []: depths = [1]
         maxD = max([max([layer.shape[2] for layer in row if len(layer.shape) > 2]) for row in grid.rows()])
+        print(maxD)
 
         # calculate layer screen dimensions based on grid
         for row in grid.rows():
@@ -104,6 +114,7 @@ class Graph(object):
 
             l1.xy['y']      = (l1.xy['y'] + l2.xy['y']) / 2.
             l1.txt_height   = (l1.txt_height + l2.txt_height) / 2.
+            print("merging", rowIdx, colIdx)
             grid.set(rowIdx, colIdx, None)
 
         # Center the figure after having calculated total height
