@@ -14,7 +14,7 @@ def defineFigure():
     fig = plt.figure(figsize=(10,10))
     axes = fig.add_subplot(111)
     plt.axis('off')
-    plt.subplots_adjust(left=0.05, right=0.95, top=1.2, bottom=.3)
+    plt.subplots_adjust(left=0.05, right=0.95, top=.95, bottom=.05)
     plt.ylim(0, 1)
     plt.xlim(0, 1)
     return fig, axes
